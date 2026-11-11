@@ -10,16 +10,9 @@ APL2 error classes and behavior where the original differs (T1);
 arrays of any rank with general (character, mixed, nested) elements (T2);
 `⎕IO ⎕CT ⎕PP ⎕RL` (T3); characters, strings and `⍞` (T4);
 `○ ! ? ⍲ ⍱` (T5); scan, axis, N-wise reduction, expand (T6);
-`, ⍪ ⌽ ⊖ ⍉ ↑ ↓ ∊ ~ ⍋ ⍒ ⊥ ⊤ ⌹` (T7); `⍕ ⍎ ⎕PW` (T8); nested arrays (T9).
-
-## T10. Functions
-
-- Redefine and edit functions: `∇F[n]` line editing, `∇F[⎕]∇` display.
-- `⎕FX`, `⎕CR`, `⎕NC`, `⎕EX`.
-- Diamond `⋄` as statement separator.
-- User functions as operands of operators (`F/`, `F¨`).
-- Ambivalent functions (`⎕NC` of the left argument).
-- Defined operators (APL2 `∇R←(F OP G) B`).
+`, ⍪ ⌽ ⊖ ⍉ ↑ ↓ ∊ ~ ⍋ ⍒ ⊥ ⊤ ⌹` (T7); `⍕ ⍎ ⎕PW` (T8); nested arrays (T9);
+`⋄`, function editing, `⎕FX ⎕CR ⎕NC ⎕EX`, functions as operands, defined
+operators (T10).
 
 ## T11. Errors and the state indicator
 

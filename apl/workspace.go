@@ -12,9 +12,10 @@ type Interp struct {
 	env      // system variables
 	vars     map[string]*Array
 	fns      map[string]*Function
-	fnGen    int       // bumped when fns change; invalidates parse caches
-	defining *Function // function being defined, or nil
-	depth    int       // user function call depth
+	fnGen    int                  // bumped when fns change; invalidates parse caches
+	editing  *editor              // function being defined or edited, or nil
+	opFrames []map[string]*fnNode // operands of the running defined operators
+	depth    int                  // user function call depth
 	out      io.Writer
 	input    *bufio.Scanner // source of ⎕ input
 	Prompt   string         // printed before each input line
@@ -36,22 +37,22 @@ func New(out io.Writer) *Interp {
 // Exec processes one input line: a statement, a ∇ header,
 // or a line of the function being defined.
 func (in *Interp) Exec(line string) error {
-	if in.defining != nil {
-		return withSrc(in.defineLine(line), line)
+	if in.editing != nil {
+		return withSrc(in.editLine(line), line)
 	}
 	toks, err := Lex(line)
 	if err != nil {
 		return withSrc(err, line)
 	}
 	if len(toks) > 0 && isSpecial(toks[0], "∇") {
-		return withSrc(in.defineHeader(line, toks), line)
+		return withSrc(in.openEditor(line), line)
 	}
 	if len(toks) >= 2 && toks[0].Kind == Name && isSpecial(toks[1], ":") {
 		toks = toks[2:] // label is ignored outside a function
 	}
-	n, err := in.parse(toks, len([]rune(line)))
+	nodes, err := in.parseLine(toks, len([]rune(line)), nil)
 	if err == nil {
-		_, err = in.run(n) // a branch at top level is ignored
+		_, err = in.runLine(nodes) // a branch at top level is ignored
 	}
 	return withSrc(err, line)
 }
@@ -156,7 +157,7 @@ func (in *Interp) Run(r io.Reader) {
 func (in *Interp) prompt() {
 	in.endLine()
 	p := in.promptText()
-	if in.defining != nil {
+	if in.editing != nil {
 		p = in.paint(stylePrompt, p)
 	}
 	fmt.Fprint(in.out, p)
@@ -164,8 +165,8 @@ func (in *Interp) prompt() {
 
 // promptText is the prompt, or "[n] " while defining a function.
 func (in *Interp) promptText() string {
-	if in.Prompt != "" && in.defining != nil {
-		return fmt.Sprintf("[%d] ", len(in.defining.Stmts)+1)
+	if in.Prompt != "" && in.editing != nil {
+		return "[" + lineNum(in.editing.cur) + "] "
 	}
 	return in.Prompt
 }
@@ -188,7 +189,7 @@ func (in *Interp) quadInput() (*Array, error) {
 		}
 		var n node
 		if err == nil {
-			n, err = in.parse(toks, len([]rune(line)))
+			n, err = in.parse(toks, len([]rune(line)), nil)
 		}
 		var v *Array
 		if err == nil {

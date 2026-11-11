@@ -103,24 +103,36 @@ type dyadNode struct {
 type fnKind int
 
 const (
-	fnPrim   fnKind = iota // primitive function
-	fnReduce               // f/ or f⌿
-	fnScan                 // f\ or f⍀
-	fnInner                // f.g
-	fnOuter                // ∘.f
-	fnUser                 // user-defined function
-	fnEach                 // f¨
+	fnPrim    fnKind = iota // primitive function
+	fnReduce                // f/ or f⌿
+	fnScan                  // f\ or f⍀
+	fnInner                 // f.g
+	fnOuter                 // ∘.f
+	fnUser                  // user-defined function
+	fnEach                  // f¨
+	fnSys                   // system function ⎕FX ⎕CR ⎕NC ⎕EX
+	fnOperand               // operand of the operator being defined
+	fnDefOp                 // function derived from a defined operator
 )
 
 type fnNode struct {
 	kind  fnKind
-	glyph string  // f
-	g     string  // g of inner product
-	first bool    // operator applies along the first axis: ⌿ ⍀
-	axis  node    // [k], or nil
-	inner *fnNode // f of f¨
-	user  *Function
+	glyph string    // primitive; f of a scalar f/ or f\; name of fnSys, fnOperand
+	first bool      // operator applies along the first axis: ⌿ ⍀
+	axis  node      // [k], or nil
+	left  *fnNode   // f of f/ f\ f.g f¨ and of a defined operator
+	right *fnNode   // g of f.g ∘.g and of a dyadic defined operator
+	user  *Function // user function or defined operator
 	at    int
+}
+
+// scalarOperands reports whether the operands of an operator are all
+// primitive dyadic scalar functions, for which there are fast paths.
+func (f *fnNode) scalarOperands() bool {
+	ok := func(g *fnNode) bool {
+		return g == nil || g.kind == fnPrim && g.axis == nil && isScalarDyad(g.glyph)
+	}
+	return ok(f.left) && ok(f.right)
 }
 
 func (n *constNode) pos() int  { return n.at }
@@ -147,20 +159,32 @@ type parser struct {
 	toks []Token
 	i    int
 	end  int                  // rune offset of end of line
-	fns  map[string]*Function // user functions
+	fns  map[string]*Function // user functions and operators
+	ops  map[string]bool      // operand names of the operator being run
 }
 
+// sysFns are the system functions.
+var sysFns = map[string]bool{"⎕FX": true, "⎕CR": true, "⎕NC": true, "⎕EX": true}
+
 // parse parses one statement; returns nil if there are no tokens.
-func (in *Interp) parse(toks []Token, end int) (node, error) {
+// Names of op's operands denote functions.
+func (in *Interp) parse(toks []Token, end int, op *Function) (node, error) {
 	if len(toks) == 0 {
 		return nil, nil
 	}
 	for _, t := range toks {
-		if t.Kind == Name && isSysName(t.Text) && !sysVars[t.Text] {
+		if t.Kind == Name && isSysName(t.Text) && !sysVars[t.Text] && !sysFns[t.Text] {
+			return nil, errorAt(SyntaxError, t.Pos)
+		}
+		if isSpecial(t, "⋄") {
 			return nil, errorAt(SyntaxError, t.Pos)
 		}
 	}
 	p := &parser{toks: toks, end: end, fns: in.fns}
+	if op != nil {
+		p.ops = map[string]bool{op.OpLeft: true, op.OpRight: true}
+		delete(p.ops, "")
+	}
 	var n node
 	var err error
 	if t := toks[0]; isSpecial(t, "→") {
@@ -214,24 +238,52 @@ func (p *parser) atExprEnd() bool {
 	return !ok || isSpecial(t, ")") || isSpecial(t, "]") || isSpecial(t, ";")
 }
 
-// userFn returns the user function named by t, if any.
+// userFn returns the user function (not operator) named by t, if any.
 func (p *parser) userFn(t Token) *Function {
-	if t.Kind != Name {
+	if t.Kind != Name || p.ops[t.Text] {
 		return nil
 	}
-	return p.fns[t.Text]
+	if f := p.fns[t.Text]; f != nil && !f.IsOperator() {
+		return f
+	}
+	return nil
+}
+
+// userOp returns the defined operator named by t, if any.
+func (p *parser) userOp(t Token) *Function {
+	if t.Kind != Name || p.ops[t.Text] {
+		return nil
+	}
+	if f := p.fns[t.Text]; f != nil && f.IsOperator() {
+		return f
+	}
+	return nil
+}
+
+// isFnName reports whether t names a function that takes arguments.
+func (p *parser) isFnName(t Token) bool {
+	if t.Kind != Name {
+		return false
+	}
+	if f := p.userFn(t); f != nil {
+		return f.Arity() > 0
+	}
+	return p.ops[t.Text] || sysFns[t.Text]
 }
 
 func (p *parser) atFn() bool {
 	t, ok := p.peek()
-	if f := p.userFn(t); f != nil {
-		return f.Arity() > 0
+	if !ok {
+		return false
 	}
-	if ok && isSpecial(t, "∘") {
+	if p.isFnName(t) {
+		return true
+	}
+	if isSpecial(t, "∘") {
 		next, ok := p.peekAt(1)
 		return ok && isSpecial(next, ".")
 	}
-	return ok && t.Kind == Prim
+	return t.Kind == Prim
 }
 
 // isScalarDyad reports whether g names a dyadic scalar function.
@@ -268,9 +320,6 @@ func (p *parser) expr() (node, error) {
 		}
 		if f.kind == fnPrim && isSlash(f.glyph) {
 			return nil, errorAt(SyntaxError, f.at)
-		}
-		if f.kind == fnUser && f.user.Arity() == 2 {
-			return nil, errorAt(ValenceError, f.at)
 		}
 		r, err := p.expr()
 		if err != nil {
@@ -347,54 +396,88 @@ func (p *parser) fn() (*fnNode, error) {
 	f, err := p.fnBase()
 	for err == nil {
 		t, ok := p.peek()
-		if !ok || t.Kind != Prim || t.Text != "¨" {
+		if !ok {
+			break
+		}
+		if t.Kind == Prim && t.Text == "¨" {
+			p.i++
+			f = &fnNode{kind: fnEach, left: f, at: t.Pos}
+			continue
+		}
+		if t.Kind == Prim && isSlash(t.Text) && f.kind != fnPrim {
+			p.i++
+			kind := fnReduce
+			if t.Text == "\\" || t.Text == "⍀" {
+				kind = fnScan
+			}
+			f = &fnNode{kind: kind, left: f, at: t.Pos, first: t.Text == "⌿" || t.Text == "⍀"}
+			continue
+		}
+		op := p.userOp(t)
+		if op == nil {
 			break
 		}
 		p.i++
-		f = &fnNode{kind: fnEach, inner: f, at: t.Pos}
+		f = &fnNode{kind: fnDefOp, user: op, left: f, at: t.Pos}
+		if op.OpRight != "" {
+			f.right, err = p.operandFn()
+		}
 	}
 	return f, err
 }
 
+// operandFn parses a primitive, user, system or operand function.
+func (p *parser) operandFn() (*fnNode, error) {
+	t, ok := p.peek()
+	if !ok {
+		return nil, errorAt(SyntaxError, p.end)
+	}
+	p.i++
+	switch {
+	case p.userFn(t) != nil && p.userFn(t).Arity() > 0:
+		return &fnNode{kind: fnUser, user: p.userFn(t), at: t.Pos}, nil
+	case t.Kind == Name && p.ops[t.Text]:
+		return &fnNode{kind: fnOperand, glyph: t.Text, at: t.Pos}, nil
+	case t.Kind == Name && sysFns[t.Text]:
+		return &fnNode{kind: fnSys, glyph: t.Text, at: t.Pos}, nil
+	case t.Kind == Prim && t.Text != "¨":
+		return &fnNode{kind: fnPrim, glyph: t.Text, at: t.Pos}, nil
+	}
+	return nil, errorAt(SyntaxError, t.Pos)
+}
+
 func (p *parser) fnBase() (*fnNode, error) {
 	t, _ := p.peek()
-	p.i++
-	if f := p.userFn(t); f != nil {
-		return &fnNode{kind: fnUser, user: f, at: t.Pos}, nil
-	}
 	if isSpecial(t, "∘") {
-		p.i++ // .
-		f, ok := p.peek()
-		if !ok || f.Kind != Prim || !isScalarDyad(f.Text) {
-			return nil, errorAt(SyntaxError, t.Pos)
+		p.i += 2 // ∘ .
+		g, err := p.operandFn()
+		if err != nil {
+			return nil, err
 		}
-		p.i++
-		return &fnNode{kind: fnOuter, glyph: f.Text, at: t.Pos}, nil
+		return &fnNode{kind: fnOuter, glyph: g.glyph, right: g, at: t.Pos}, nil
+	}
+	f, err := p.operandFn()
+	if err != nil {
+		return nil, err
 	}
 	if dot, ok := p.peek(); ok && isSpecial(dot, ".") {
-		g, ok := p.peekAt(1)
-		if !ok || g.Kind != Prim || !isScalarDyad(t.Text) || !isScalarDyad(g.Text) {
-			return nil, errorAt(SyntaxError, t.Pos)
-		}
-		p.i += 2
-		return &fnNode{kind: fnInner, glyph: t.Text, g: g.Text, at: t.Pos}, nil
-	}
-	if t.Text == "¨" {
-		return nil, errorAt(SyntaxError, t.Pos)
-	}
-	f := &fnNode{kind: fnPrim, glyph: t.Text, at: t.Pos}
-	if op, ok := p.peek(); ok && op.Kind == Prim && isSlash(op.Text) && !isSlash(t.Text) {
 		p.i++
-		if !isScalarDyad(t.Text) {
-			return nil, errorAt(SyntaxError, t.Pos)
+		g, err := p.operandFn()
+		if err != nil {
+			return nil, err
 		}
-		f.kind = fnReduce
+		return &fnNode{kind: fnInner, glyph: f.glyph, left: f, right: g, at: t.Pos}, nil
+	}
+	if f.kind == fnPrim && isSlash(f.glyph) {
+		f.first = f.glyph == "⌿" || f.glyph == "⍀"
+	} else if op, ok := p.peek(); ok && op.Kind == Prim && isSlash(op.Text) {
+		p.i++
+		kind := fnReduce
 		if op.Text == "\\" || op.Text == "⍀" {
-			f.kind = fnScan
+			kind = fnScan
 		}
-		f.first = op.Text == "⌿" || op.Text == "⍀"
-	} else if isSlash(t.Text) {
-		f.first = t.Text == "⌿" || t.Text == "⍀"
+		f = &fnNode{kind: kind, glyph: f.glyph, left: f, at: t.Pos,
+			first: op.Text == "⌿" || op.Text == "⍀"}
 	}
 	if b, ok := p.peek(); ok && isSpecial(b, "[") {
 		p.i++
@@ -425,8 +508,7 @@ func (p *parser) startsOperand() bool {
 	case t.Kind == Number, t.Kind == String, isSpecial(t, "("):
 		return true
 	case t.Kind == Name:
-		f := p.userFn(t)
-		return (f == nil || f.Arity() == 0) && !isSpecial(next, "←")
+		return !p.isFnName(t) && p.userOp(t) == nil && !isSpecial(next, "←")
 	case isSpecial(t, "⎕"), isSpecial(t, "⍞"):
 		return !isSpecial(next, "←")
 	}
@@ -616,6 +698,9 @@ func (p *parser) primary() (node, error) {
 		}
 		return &constNode{val: v, at: t.Pos}, nil
 	case t.Kind == Name:
+		if p.userOp(t) != nil {
+			return nil, errorAt(SyntaxError, t.Pos)
+		}
 		p.i++
 		if f := p.userFn(t); f != nil { // niladic; others are taken by atFn
 			return &callNode{fn: f, at: t.Pos}, nil

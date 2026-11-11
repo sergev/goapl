@@ -171,6 +171,7 @@ quotes is an ordinary character.
 | `∇` | function definition |
 | `:` | label |
 | `⍝` | comment |
+| `⋄` | statement separator |
 
 # Arrays
 
@@ -285,7 +286,7 @@ so it can be used inside an expression.
 ```
 
 A variable can take a value of any shape. Using a name with no value
-gives *Variable not assigned a value*.
+gives a `VALUE ERROR`.
 
 ```apl
       UNKNOWN+1
@@ -1506,7 +1507,9 @@ of the next statement.
 2.5
 ```
 
-The closing `∇` may also end the last statement.
+The closing `∇` may also end the last statement. A line may hold several
+statements separated by `⋄`; they run left to right, and a branch skips
+the rest of the line.
 
 ```apl
       ∇R←DOUBLE X
@@ -1541,11 +1544,28 @@ variable. There are six forms:
 
 A function with a result is used like a primitive function. A function
 without a result can only be called as a whole statement; using its value
-gives *Variable not assigned a value*. The same happens when the result
-variable is never assigned.
+gives a `VALUE ERROR`. The same happens when the result variable is never
+assigned.
 
-A function cannot be redefined: defining an existing name gives
-*Function already defined*. A function must have at least one statement.
+A function with two arguments may also be called with one: its left
+argument then has no value, which `⎕NC` tells.
+
+```apl
+      ∇R←A PLUS B
+[1] →(0=⎕NC 'A')/ONE
+[2] R←A+B ⋄ →0
+[3] ONE:R←B
+[4] ∇
+      2 PLUS 3
+5
+      PLUS 3
+3
+```
+
+A header with a new name defines a function; a header that repeats an
+existing function's name with other arguments is a `DEFN ERROR`. To
+change a function, open it with its name alone (see
+[Editing functions](#editing-functions)).
 
 ## Statements
 
@@ -1664,6 +1684,130 @@ later. Calls may nest up to 1000 deep.
 55
 ```
 
+## Editing functions
+
+`∇F` with the name of an existing function opens it for editing; the
+prompt shows the number of the next line, after the last one. A line
+may start with a command in brackets:
+
+| Command | Effect |
+|:--|:--|
+| `[n]` | go to line n; text after it replaces that line |
+| `[1.5]` | a fractional number inserts a line between 1 and 2 |
+| `[0]` | line 0 is the header |
+| `[⎕]` | show the whole function |
+| `[⎕n]` | show from line n to the end |
+| `[n⎕]` | show line n |
+| `[∆n]` | delete line n |
+
+Commands may also follow the name on the `∇` line, as in `∇F[⎕]∇`. The
+closing `∇` numbers the lines again from 1.
+
+```apl
+      ∇R←SQUARE X
+[1] R←X×X
+[2] ∇
+      ∇SQUARE
+[2] [0] R←SQUARE X;T
+[1] [0.5] T←X
+[0.6] [1] R←T×T
+[2] [⎕]
+    ∇R←SQUARE X;T
+[0.5]  T←X
+[1]  R←T×T
+    ∇
+[2] ∇
+      ∇SQUARE[⎕]∇
+    ∇R←SQUARE X;T
+[1]  T←X
+[2]  R←T×T
+    ∇
+```
+
+## Function representation `⎕CR`, `⎕FX`
+
+`⎕CR 'F'` gives the lines of function F, header first, as a character
+matrix; it is empty if F is not a function. `⎕FX` defines (or replaces)
+a function from its lines: a character matrix, or a vector of strings.
+It gives the function's name, or the index of the first line in error.
+
+```apl
+      ⎕FX 'R←DBL X' 'R←2×X'
+DBL
+      DBL 4
+8
+      ⍴⎕CR 'DBL'
+2 7
+      ⎕FX 'R←BAD X' 'L:1' 'L:2'
+3
+```
+
+## Name class `⎕NC` and erase `⎕EX`
+
+`⎕NC` tells what a name denotes: 0 nothing, 2 a variable, 3 a function,
+4 an operator, ¯1 not a valid name. `⎕EX` erases a variable or function
+and gives 1 (0 for a name it cannot erase). Both take a string, or a
+matrix of names, one per row, and then give a vector.
+
+```apl
+      X←5
+      ⎕NC 'X'
+2
+      ⎕FX 'R←DBL X' 'R←2×X'
+DBL
+      ⎕NC 'DBL'
+3
+      ⎕EX 'X'
+1
+      ⎕NC 2 3⍴'X  DBL'
+0 3
+```
+
+## Functions as operands
+
+Operators accept any dyadic function, including user functions and
+derived functions. Such functions apply to items: each element is
+passed as an array, and each result becomes an element. Reducing an
+empty axis by such a function is a `DOMAIN ERROR`.
+
+```apl
+      ∇R←A ADD B
+[1] R←A+B
+[2] ∇
+      ADD/1 2 3 4
+10
+      1 2∘.ADD 10 20
+11 21
+12 22
+      ,/'AB' 'CD' 'EF'
+ ABCDEF
+      ADD¨/(1 2)(3 4)
+ 4 6
+```
+
+## Defined operators
+
+An operator header puts the operator's name between its operands in
+parentheses: `∇R←(F OP) X` for an operator taking one function,
+`∇R←A (F OP G) B` for one taking two. In the body, F and G are used as
+functions. The derived function, like `+OP`, may be monadic or dyadic
+as the header says.
+
+```apl
+      ∇R←(F TWICE) X
+[1] R←F F X
+[2] ∇
+      -TWICE 5
+5
+      +/TWICE 2 2⍴⍳4
+10
+      ∇R←A (F AND G) B
+[1] R←(A F B),(A G B)
+[2] ∇
+      6 +AND- 2
+8 4
+```
+
 ## Errors in functions
 
 An error stops all running functions and returns to the session. The
@@ -1701,7 +1845,7 @@ LENGTH ERROR
 | RANK ERROR | ranks differ; a matrix where a vector is needed; wrong number of indices |
 | INDEX ERROR | `V[0]`, `V[1+⍴V]` |
 | AXIS ERROR | `+/[3]M` for a matrix M; an axis on a function without one |
-| DEFN ERROR | bad function header; redefining a function |
+| DEFN ERROR | bad function header; a header for an existing function; a bad editor command; a label used twice |
 | NONCE ERROR | a glyph that goapl knows but does not implement yet |
 | SYSTEM LIMIT | more than 1000 nested calls |
 | INTERRUPT | `⎕` at end of input |
@@ -1726,6 +1870,8 @@ goapl adds to the language of the Pascal original:
 - Format `⍕`, execute `⍎`, folding of long lines.
 - Nested arrays: strands, `⊂ ⊃ ≡ ∊`, each, strand and selective
   assignment.
+- `⋄`, function editing, `⎕FX ⎕CR ⎕NC ⎕EX`, any function as an operand,
+  ambivalent functions, defined operators.
 
 goapl follows APL2 where the original differs:
 
@@ -1754,7 +1900,8 @@ numbers.
 ## Grammar
 
 ```text
-statement  := → expr | label : expr | expr
+line       := [ label : ] statement { ⋄ statement }
+statement  := → expr | expr
 expr       := fn expr
             | name ← expr
             | name [ index ] ← expr
@@ -1767,11 +1914,12 @@ strand     := operand { operand }
 operand    := ( number... | 'string' | name | niladic-fn | ⎕ | ⍞ | ( expr ) )
               { [ index ] }
 index      := [ expr ] { ; [ expr ] }
-fn         := ( ( primitive | primitive op ) [ [ expr ] ]
-            | primitive . primitive | ∘ . primitive | user-fn ) { ¨ }
+fn         := ( f [ op ] [ [ expr ] ] | f . f | ∘ . f ) { ¨ | op | defined-op [ f ] }
+f          := primitive | user-fn | ⎕FX | ⎕CR | ⎕NC | ⎕EX
 op         := / | ⌿ | \ | ⍀
 name       := variable | ⎕IO | ⎕CT | ⎕PP | ⎕PW | ⎕RL
-header     := ∇ [ name ← ] [ name ] name [ name ] { ; name }
+header     := ∇ [ name ← ] [ name ] fname [ name ] { ; name }
+fname      := name | ( name name [ name ] )
 ```
 
 ## Functions
@@ -1812,6 +1960,10 @@ header     := ∇ [ name ← ] [ name ] name [ name ] { ; name }
 | `⊃` | items of Y as one array | item X of Y |
 | `≡` | depth of Y | X and Y are the same |
 | `f¨` | f on each item of Y | f on each pair of items |
+| `⎕FX` | define function from lines Y | |
+| `⎕CR` | lines of function named Y | |
+| `⎕NC` | class of name Y | |
+| `⎕EX` | erase name Y | |
 | `⍎` | value of statement Y | |
 | `/ ⌿` | | Y replicated by X |
 | `\ ⍀` | | Y expanded by X |

@@ -46,7 +46,7 @@ func (t Token) String() string {
 
 const (
 	primGlyphs    = "+-×÷*⍳⍴,⍪~=≠<≤≥>∧∨⍲⍱⌈⌊○/⌿\\⍀?↑↓⊥⊤|ε∊⌽⊖⍉⍋⍒!⍟⌹⍕⍎⊂⊃≡¨"
-	specialGlyphs = "←→∇⎕⍞()[];:.∘"
+	specialGlyphs = "←→∇⎕⍞()[];:.∘⋄"
 )
 
 // Lex splits a line into tokens.

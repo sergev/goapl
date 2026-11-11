@@ -87,19 +87,15 @@ DOMAIN ERROR
 DOMAIN ERROR
 ÷/1 0
 ^
-      ⍝ Only dyadic scalar functions can be reduced
+      ⍝ Other functions work on items (see 20-functions)
       ~/1 0
-SYNTAX ERROR
-~/1 0
-^
+ 1
       ⍳/1 2
-SYNTAX ERROR
+RANK ERROR
 ⍳/1 2
 ^
       ,/1 2
-SYNTAX ERROR
-,/1 2
-^
+ 1 2
       /1 2
 SYNTAX ERROR
 /1 2

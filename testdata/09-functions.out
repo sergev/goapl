@@ -171,9 +171,9 @@ V
       CALLER 1
 2
       ⍝ Header errors; after a rejected header, lines run as usual
-      ∇HELLO
+      ∇R←HELLO X
 DEFN ERROR
-∇HELLO
+∇R←HELLO X
  ^
       ∇
 DEFN ERROR
@@ -208,11 +208,11 @@ DEFN ERROR
 SYNTAX ERROR
 SQ←1
 ^
-      ⍝ Wrong number of arguments
+      ⍝ Wrong number of arguments; a dyadic function called with one has no left argument
       HYP 1
-VALENCE ERROR
-HYP 1
-^
+VALUE ERROR
+HYP[1] R←((A*2)+B*2)*0.5
+           ^
       1 SQ 2
 VALENCE ERROR
 1 SQ 2

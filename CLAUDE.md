@@ -66,6 +66,13 @@ Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
   in the parsed selection by a `posNode` (element positions) and assigns
   through the positions it yields. Scalar functions pervade via
   `scalarFn.elem`.
+- **Functions and operators** (`function.go`, `editor.go`, `sysfns.go`,
+  `derived.go`): a `Function` keeps its header and line texts; `fix`
+  builds one from lines (used by the `∇` editor and `⎕FX`). A line is
+  split at `⋄` by `parseLine`. Operators take any function: scalar
+  primitives use the fast paths in `operators.go`, others the item-wise
+  versions in `derived.go`. A defined operator's operands are bound in
+  `Interp.opFrames`; in its body they parse as `fnOperand`.
 - **User functions**: `Interp.call` implements dynamic scoping by saving
   and restoring globals for args, result, `;locals` and labels; labels are
   local constants equal to their line number; `→` returns a target from
@@ -86,7 +93,8 @@ Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
   deliberate differences are marked `differs_*`.
 - `apl/manual_test.go`: every ```` ```apl ```` block in `Manual.md` is run as a
   session and must match. Non-session blocks use ```` ```text ````. An output
-  line starting with 6 spaces would be read as input, so avoid such examples.
+  line starting with 6 spaces, or with `[n]` and one blank, would be read
+  as input, so avoid such examples.
 - `tools/compare_cases.txt`: cases for `make compare`; `!` marks a known
   difference with the reason in the comment above it.
 

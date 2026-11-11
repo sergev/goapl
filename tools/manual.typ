@@ -41,7 +41,7 @@
 // Session examples: typed lines in color, error carets in red.
 #show raw.where(block: true, lang: "apl"): it => {
   show raw.line: l => {
-    if l.text.starts-with("      ") or l.text.match(regex("^\[\d+\] ")) != none {
+    if l.text.starts-with("      ") or l.text.match(regex("^\[[\d.]+\] ([^ ]|$)")) != none {
       text(fill: typed, l.body)
     } else if l.text.trim() == "^" {
       text(fill: caret, l.body)

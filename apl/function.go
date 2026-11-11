@@ -5,17 +5,21 @@ import "strings"
 // MaxDepth limits nesting of user function calls.
 const MaxDepth = 1000
 
-// Function is a user-defined (∇) function.
+// Function is a user-defined (∇) function or operator.
 type Function struct {
-	Name   string
-	Result string // explicit result name, or ""
-	Left   string // left argument name (dyadic), or ""
-	Right  string // right argument name (monadic, dyadic), or ""
-	Locals []string
-	Stmts  []*stmt
+	Name    string
+	Result  string // explicit result name, or ""
+	Left    string // left argument name (dyadic), or ""
+	Right   string // right argument name (monadic, dyadic), or ""
+	OpLeft  string // left operand name of an operator, or ""
+	OpRight string // right operand name of a dyadic operator, or ""
+	Locals  []string
+	Header  string // header text without ∇
+	Stmts   []*stmt
 }
 
-// Arity returns 0, 1 or 2.
+// Arity returns 0, 1 or 2: the valence of the function, or of the
+// functions an operator derives.
 func (f *Function) Arity() int {
 	switch {
 	case f.Left != "":
@@ -26,109 +30,186 @@ func (f *Function) Arity() int {
 	return 0
 }
 
+// IsOperator reports whether f is a defined operator.
+func (f *Function) IsOperator() bool { return f.OpLeft != "" }
+
 // stmt is one line of a function body.
 type stmt struct {
 	label string
 	text  string
 	toks  []Token
-	node  node // parse cache
-	gen   int  // fnGen at time of parse
+	nodes []node // parse cache: statements separated by ⋄
+	gen   int    // fnGen at time of parse
 }
 
-// defineHeader parses "∇[R←][A] F [B]{;L}" and enters definition mode.
-func (in *Interp) defineHeader(line string, toks []Token) error {
-	toks = toks[1:] // ∇
-	f := &Function{}
-	var names []string
+// Lines gives the header and the body lines, as ⎕CR shows them.
+func (f *Function) Lines() []string {
+	r := []string{f.Header}
+	for _, st := range f.Stmts {
+		r = append(r, st.text)
+	}
+	return r
+}
+
+// parseHeader parses "[R←][A] F [B]{;L}", where F may be "(F OP [G])"
+// for an operator.
+func parseHeader(text string) (*Function, error) {
+	toks, err := Lex(text)
+	if err != nil {
+		return nil, err
+	}
+	f := &Function{Header: strings.TrimSpace(text)}
+	end := len([]rune(text))
 	i := 0
+	bad := func() error {
+		if i < len(toks) {
+			return errorAt(DefnError, toks[i].Pos)
+		}
+		return errorAt(DefnError, end)
+	}
 	// name reads a name; sys allows a system variable.
 	name := func(sys bool) (string, error) {
 		if i >= len(toks) || toks[i].Kind != Name ||
 			isSysName(toks[i].Text) && !(sys && sysVars[toks[i].Text]) {
-			pos := len([]rune(line))
-			if i < len(toks) {
-				pos = toks[i].Pos
-			}
-			return "", errorAt(DefnError, pos)
+			return "", bad()
 		}
 		i++
 		return toks[i-1].Text, nil
 	}
-	n, err := name(false)
-	if err != nil {
-		return err
-	}
-	if i < len(toks) && isSpecial(toks[i], "←") {
-		i++
-		f.Result = n
-		if n, err = name(false); err != nil {
-			return err
+	if len(toks) > 1 && toks[0].Kind == Name && isSpecial(toks[1], "←") {
+		if f.Result, err = name(false); err != nil {
+			return nil, err
 		}
-	}
-	names = append(names, n)
-	for len(names) < 3 && i < len(toks) && toks[i].Kind == Name && !isSysName(toks[i].Text) {
-		names = append(names, toks[i].Text)
 		i++
+	}
+	// Up to three items: names, and at most one "(F OP [G])".
+	var items []string
+	group := -1
+	for len(items) < 3 && i < len(toks) && !isSpecial(toks[i], ";") {
+		if isSpecial(toks[i], "(") {
+			if group >= 0 {
+				return nil, bad()
+			}
+			i++
+			var g []string
+			for len(g) < 3 && i < len(toks) && toks[i].Kind == Name {
+				n, _ := name(false)
+				g = append(g, n)
+			}
+			if len(g) < 2 || i >= len(toks) || !isSpecial(toks[i], ")") {
+				return nil, bad()
+			}
+			i++
+			group = len(items)
+			f.OpLeft, f.Name = g[0], g[1]
+			if len(g) == 3 {
+				f.OpRight = g[2]
+			}
+			items = append(items, f.Name)
+			continue
+		}
+		n, err := name(false)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, n)
 	}
 	for i < len(toks) && isSpecial(toks[i], ";") {
 		i++
 		l, err := name(true)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		f.Locals = append(f.Locals, l)
 	}
-	if i < len(toks) {
-		return errorAt(DefnError, toks[i].Pos)
+	if i < len(toks) || len(items) == 0 {
+		return nil, bad()
 	}
-	switch len(names) {
+	fn := 0 // index of the function name among items
+	if len(items) == 3 {
+		fn = 1
+	}
+	if group >= 0 && group != fn {
+		return nil, errorAt(DefnError, 0)
+	}
+	switch len(items) {
 	case 1:
-		f.Name = names[0]
+		f.Name = items[0]
 	case 2:
-		f.Name, f.Right = names[0], names[1]
+		f.Name, f.Right = items[0], items[1]
 	case 3:
-		f.Left, f.Name, f.Right = names[0], names[1], names[2]
+		f.Left, f.Name, f.Right = items[0], items[1], items[2]
 	}
-	if _, ok := in.fns[f.Name]; ok {
-		return errorAt(DefnError, toks[0].Pos)
-	}
-	in.defining = f
-	return nil
+	return f, nil
 }
 
-// defineLine adds a body line or closes the definition with ∇.
-func (in *Interp) defineLine(line string) error {
-	f := in.defining
-	toks, err := Lex(line)
+// fix builds a function from its header and body lines. A bad line
+// gives a DEFN ERROR; line is its index (0 for the header).
+func fix(lines []string) (f *Function, line int, err error) {
+	if len(lines) == 0 {
+		return nil, 0, newError(DefnError)
+	}
+	f, err = parseHeader(lines[0])
 	if err != nil {
-		return err
+		return nil, 0, err
 	}
-	closing := len(toks) > 0 && isSpecial(toks[len(toks)-1], "∇")
-	if closing {
-		toks = toks[:len(toks)-1]
-		end := len(line)
-		if i := strings.LastIndex(line, "∇"); i >= 0 {
-			end = i
+	labels := map[string]bool{}
+	for k, text := range lines[1:] {
+		toks, err := Lex(text)
+		if err != nil {
+			return nil, k + 1, err
 		}
-		line = line[:end]
-	}
-	if len(toks) > 0 || strings.Contains(line, "⍝") {
-		st := &stmt{text: line, toks: toks}
+		st := &stmt{text: text, toks: toks}
 		if len(toks) >= 2 && toks[0].Kind == Name && isSpecial(toks[1], ":") {
 			st.label = toks[0].Text
 			st.toks = toks[2:]
+			if labels[st.label] || isSysName(st.label) {
+				return nil, k + 1, errorAt(DefnError, toks[0].Pos)
+			}
+			labels[st.label] = true
 		}
 		f.Stmts = append(f.Stmts, st)
 	}
-	if closing {
-		in.defining = nil
-		in.fns[f.Name] = f
-		in.fnGen++
+	return f, 0, nil
+}
+
+// parseLine parses the statements of a line, separated by ⋄; end is
+// the rune length of the line.
+func (in *Interp) parseLine(toks []Token, end int, op *Function) ([]node, error) {
+	var nodes []node
+	start := 0
+	for i := 0; i <= len(toks); i++ {
+		e := end
+		if i < len(toks) {
+			if !isSpecial(toks[i], "⋄") {
+				continue
+			}
+			e = toks[i].Pos
+		}
+		n, err := in.parse(toks[start:i], e, op)
+		if err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, n)
+		start = i + 1
 	}
-	return nil
+	return nodes, nil
+}
+
+// runLine runs the statements of a line in order until a branch.
+func (in *Interp) runLine(nodes []node) (int, error) {
+	for _, n := range nodes {
+		target, err := in.run(n)
+		if err != nil || target >= 0 {
+			return target, err
+		}
+	}
+	return -1, nil
 }
 
 // call runs a user function with dynamic scoping of its local names.
+// A dyadic function called with one argument leaves its left argument
+// without a value.
 func (in *Interp) call(f *Function, left, right *Array) (*Array, error) {
 	if in.depth >= MaxDepth {
 		return nil, newError(SystemLimit)
@@ -170,23 +251,26 @@ func (in *Interp) call(f *Function, left, right *Array) (*Array, error) {
 			in.vars[st.label] = Scalar(float64(i + 1))
 		}
 	}
-	if f.Left != "" {
+	if f.Left != "" && left != nil {
 		in.vars[f.Left] = left
 	}
 	if f.Right != "" {
 		in.vars[f.Right] = right
 	}
-
+	var op *Function
+	if f.IsOperator() {
+		op = f
+	}
 	for pc := 1; pc >= 1 && pc <= len(f.Stmts); {
 		st := f.Stmts[pc-1]
-		if st.node == nil || st.gen != in.fnGen {
-			n, err := in.parse(st.toks, len([]rune(st.text)))
+		if st.nodes == nil || st.gen != in.fnGen {
+			nodes, err := in.parseLine(st.toks, len([]rune(st.text)), op)
 			if err != nil {
 				return nil, locate(err, f, pc, st.text)
 			}
-			st.node, st.gen = n, in.fnGen
+			st.nodes, st.gen = nodes, in.fnGen
 		}
-		target, err := in.run(st.node)
+		target, err := in.runLine(st.nodes)
 		if err != nil {
 			return nil, locate(err, f, pc, st.text)
 		}

@@ -80,14 +80,18 @@ R←R×I
 ∇
 ```
 
-- The header is `∇[R←][A] F [B]` with optional local names `;X;Y`.
-  Arguments, result, locals and labels are local to the call (dynamic
-  scope); other names are global.
+- The header is `∇[R←][A] F [B]` with optional local names `;X;Y`;
+  `∇R←A (F OP G) B` defines an operator. Arguments, result, locals and
+  labels are local to the call (dynamic scope); other names are global.
+  A dyadic function may be called with one argument.
 - `→N` jumps to statement N; a target outside the function (e.g. `→0`)
   returns. `→` of an empty vector does nothing, so `→(cond)/L` branches
   conditionally. A label `L:` is a local constant equal to its line number.
 - The definition ends with a line `∇`, or with `∇` at the end of the last
-  statement. A function cannot be redefined yet (DEFN ERROR).
+  statement. `∇F` reopens a function for editing with `[n]`, `[⎕]` and
+  `[∆n]` commands. `⋄` separates statements on a line.
+- `⎕FX`, `⎕CR`, `⎕NC` and `⎕EX` define, show, classify and erase names.
+  User and derived functions can be operands (`ADD/`, `,/`, `F¨`).
 - An error inside a function aborts to the top level and shows where:
   `FACT[2] R←X÷0`.
 - `⎕←X` prints X. `⎕` prompts with `⎕:`, reads a line from the same input
@@ -108,7 +112,7 @@ R←R×I
 `make test` runs unit tests and golden tests. Each `testdata/*.apl` script
 covers one area of the language (lexical rules, monadic and dyadic
 functions, reduction, structural functions, products, indexing, syntax,
-user functions, `⎕`, output format, edge cases, system variables, characters, more scalar functions, axis, rearranging functions, format and execute, nested arrays), with `⍝` comments saying
+user functions, `⎕`, output format, edge cases, system variables, characters, more scalar functions, axis, rearranging functions, format and execute, nested arrays, functions and operators), with `⍝` comments saying
 what each group checks. It is run as an interactive session, and the
 transcript (input after the prompt, then output) is compared with the
 matching `.out` file.

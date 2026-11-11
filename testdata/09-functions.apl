@@ -138,7 +138,7 @@ R←X+1
 ∇
 CALLER 1
 ⍝ Header errors; after a rejected header, lines run as usual
-∇HELLO
+∇R←HELLO X
 ∇
 ∇R←
 ∇R←A B C D
@@ -151,7 +151,7 @@ CALLER 1
 EMPTY
 ⍝ A function name cannot be assigned
 SQ←1
-⍝ Wrong number of arguments
+⍝ Wrong number of arguments; a dyadic function called with one has no left argument
 HYP 1
 1 SQ 2
 (SQ)

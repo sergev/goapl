@@ -10,10 +10,12 @@ import (
 
 const manualPath = "../Manual.md"
 
-// Input lines of a transcript: after the 6-space prompt or a "[n] " prompt.
-// A line of spaces and a caret is error output.
+// Input lines of a transcript: after the 6-space prompt or a "[n] " prompt
+// (a displayed function line has two blanks after "[n]"). A line of
+// spaces and a caret is error output.
 var (
-	defPrompt = regexp.MustCompile(`^\[\d+\] `)
+	defPrompt = regexp.MustCompile(`^\[[\d.]+\] ([^ ]|$)`)
+	promptTag = regexp.MustCompile(`^\[[\d.]+\] `)
 	caretLine = regexp.MustCompile(`^ *\^$`)
 )
 
@@ -27,7 +29,7 @@ func transcriptInput(block string) string {
 		case l == "":
 			// an empty output line
 		case defPrompt.MatchString(l):
-			in = append(in, defPrompt.ReplaceAllString(l, ""))
+			in = append(in, promptTag.ReplaceAllString(l, ""))
 		}
 	}
 	return strings.Join(in, "\n") + "\n"

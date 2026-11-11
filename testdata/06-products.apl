@@ -32,7 +32,7 @@
 1 2+.×1 2 3
 (2 3⍴1)+.×2 3⍴1
 1 2∘.÷0 1
-⍝ Only dyadic scalar functions can be combined
+⍝ Other functions work on items (see 20-functions)
 +.,1
 ,.+1
 +.⍳1

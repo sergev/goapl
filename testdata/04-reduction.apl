@@ -43,7 +43,7 @@
 ⍝ Errors
 ⍟/⍳0
 ÷/1 0
-⍝ Only dyadic scalar functions can be reduced
+⍝ Other functions work on items (see 20-functions)
 ~/1 0
 ⍳/1 2
 ,/1 2

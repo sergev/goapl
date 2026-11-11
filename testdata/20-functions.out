@@ -1,0 +1,265 @@
+      ⍝ Diamonds separate statements on a line; they run left to right
+      1+2 ⋄ 3+4
+3
+7
+      X←1 ⋄ Y←X+1 ⋄ X,Y
+1 2
+      ∇R←F N
+[1] R←0 ⋄ →(N>0)/MORE ⋄ R←¯1
+[2] →0
+[3] MORE:R←N
+[4] ∇
+      F 5
+5
+      F 0
+¯1
+      ⍝ A branch ends the rest of the line
+      ∇R←G
+[1] R←1 ⋄ →0 ⋄ R←2
+[2] ∇
+      G
+1
+      ⍝ Display a function with [⎕]; ∇ at the end closes the editor
+      ∇F[⎕]∇
+    ∇R←F N
+[1]  R←0 ⋄ →(N>0)/MORE ⋄ R←¯1
+[2]  →0
+[3]  MORE:R←N
+    ∇
+      ⍝ Edit: [n] goes to line n, [n.5] inserts, [∆n] deletes
+      ∇F
+[4] [2] R←10 ⋄ →(N>0)/MORE
+[3] [1.5] ⍝ inserted
+[1.6] [5] ⍝ temporary
+[6] [⎕]
+    ∇R←F N
+[1]  R←0 ⋄ →(N>0)/MORE ⋄ R←¯1
+[1.5]  ⍝ inserted
+[2]  R←10 ⋄ →(N>0)/MORE
+[3]  MORE:R←N
+[5]  ⍝ temporary
+    ∇
+[6] [∆5]
+[5] [2⎕]
+[2]  R←10 ⋄ →(N>0)/MORE
+[5] ∇
+      ∇F[⎕]∇
+    ∇R←F N
+[1]  R←0 ⋄ →(N>0)/MORE ⋄ R←¯1
+[2]  ⍝ inserted
+[3]  R←10 ⋄ →(N>0)/MORE
+[4]  MORE:R←N
+    ∇
+      ⍝ Lines are renumbered on closing
+      ∇F[⎕3]∇
+[3]  R←10 ⋄ →(N>0)/MORE
+[4]  MORE:R←N
+    ∇
+      ⍝ Line 0 is the header
+      ∇F[0] R←F N;I
+[1] [1] R←N×2
+[2] [⎕]
+    ∇R←F N;I
+[1]  R←N×2
+[2]  ⍝ inserted
+[3]  R←10 ⋄ →(N>0)/MORE
+[4]  MORE:R←N
+    ∇
+[2] ∇
+      F 4
+4
+      ⍝ Appending to a function goes after its last line
+      ∇G
+[2] R←R+10
+[3] ∇
+      G
+1
+      ⍝ ⎕CR gives the lines of a function; ⎕FX defines one
+      ⎕CR 'G'
+R←G           
+R←1 ⋄ →0 ⋄ R←2
+R←R+10        
+      ⍴⎕CR 'G'
+3 14
+      ⍴⎕CR 'NOSUCH'
+0 0
+      ⎕FX 'R←DBL X' 'R←2×X'
+DBL
+      DBL 4
+8
+      ⎕FX 2 9⍴'R←INC X  R←X+1    '
+INC
+      INC 1
+2
+      ⎕FX ⎕CR 'G'
+G
+      ⍝ ⎕FX gives the index of a bad line
+      ⎕FX 'R←' 'R←1'
+1
+      ⎕FX 'R←BAD X' 'L:1' 'L:2'
+3
+      ⍝ ⎕NC: 0 unused, 2 variable, 3 function, 4 operator, ¯1 invalid
+      ⎕NC 'DBL'
+3
+      ⎕NC 'X'
+2
+      ⎕NC 'NOSUCH'
+0
+      ⎕NC '1A'
+¯1
+      ⎕NC '⎕IO'
+2
+      ⎕NC 2 3⍴'DBLX  '
+3 2
+      ⍝ ⎕EX erases names
+      ⎕EX 'X'
+1
+      ⎕NC 'X'
+0
+      ⎕EX 'DBL'
+1
+      ⎕NC 'DBL'
+0
+      ⎕EX 2 4⍴'INC ⎕IO'
+1 0
+      ⍝ A function with two arguments may be called with one
+      ∇R←A PL B
+[1] →(0=⎕NC 'A')/MON
+[2] R←A+B ⋄ →0
+[3] MON:R←B
+[4] ∇
+      5 PL 3
+8
+      PL 3
+3
+      ⍝ User and other functions as operands
+      ∇R←A ADD B
+[1] R←A+B
+[2] ∇
+      ADD/1 2 3 4
+10
+      ADD\1 2 3
+1 3 6
+      2 ADD/1 2 3 4
+3 5 7
+      1 2 ADD.× 3 4
+11
+      1 2∘.ADD 10 20
+11 21
+12 22
+      ,/'AB' 'CD' 'EF'
+ ABCDEF
+      ⍴,/'AB' 'CD'
+
+      ⍳/2 3⍴1 2 3
+RANK ERROR
+⍳/2 3⍴1 2 3
+^
+      (2 2⍴⍳4)+.,2 2⍴⍳4
+ 3 4  3 6
+ 7 4  7 6
+      1 2∘.⍴1 2
+ 1    2
+ 1 1  2 2
+      ADD¨/(1 2)(3 4)
+ 4 6
+      ADD/⍳0
+DOMAIN ERROR
+ADD/⍳0
+^
+      ⍝ A variable cannot be fixed as a function
+      DBL←0
+      ⎕FX 'R←DBL X' 'R←2×X'
+1
+      ⎕EX 'DBL'
+1
+      ⍝ Defined operators: (F OP) or (F OP G) in the header
+      ∇R←(F TWICE) X
+[1] R←F F X
+[2] ∇
+      -TWICE 5
+5
+      ⌽¨TWICE 'AB' 'CD'
+ AB  CD
+      +/TWICE 2 2⍴⍳4
+10
+      ∇R←A (F AND G) B
+[1] R←(A F B),(A G B)
+[2] ∇
+      6 +AND- 2
+8 4
+      6 ×AND÷ 2
+12 3
+      ∇R←A (F WITH) B
+[1] R←A F B F A
+[2] ∇
+      2 -WITH 5
+¯1
+      ⎕FX 'R←DBL X' 'R←2×X'
+DBL
+      DBL TWICE 3
+12
+      ⍝ Operands may come from an enclosing operator
+      ∇R←(F THRICE) X
+[1] R←F TWICE F X
+[2] ∇
+      DBL THRICE 1
+8
+      ⎕NC 'TWICE'
+4
+      ⎕CR 'AND'
+R←A (F AND G) B  
+R←(A F B),(A G B)
+      ⍝ Errors
+      1 2 (3 ⋄ 4
+SYNTAX ERROR
+1 2 (3 ⋄ 4
+    ^
+      ∇F[⎕
+DEFN ERROR
+∇F[⎕
+^
+      ∇NEW[2]
+DEFN ERROR
+∇NEW[2]
+ ^
+      ∇R←A (F) B
+DEFN ERROR
+∇R←A (F) B
+       ^
+      ∇R←(F OP) (G X)
+DEFN ERROR
+∇R←(F OP) (G X)
+          ^
+      ∇R←(F OP G H) X
+DEFN ERROR
+∇R←(F OP G H) X
+           ^
+      ∇PL B
+DEFN ERROR
+∇PL B
+ ^
+      1 ADD
+SYNTAX ERROR
+1 ADD
+     ^
+      -AND 1
+SYNTAX ERROR
+-AND 1
+     ^
+      TWICE 1
+SYNTAX ERROR
+TWICE 1
+^
+      ∇R←T
+[1] R←1
+[2] L:2
+[3] L:3
+[4] ∇
+DEFN ERROR
+[3] L:3
+    ^
+      T
+VALUE ERROR
+T
+^

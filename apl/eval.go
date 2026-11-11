@@ -173,12 +173,21 @@ func (in *Interp) selectiveAssign(n *selAssignNode, v *Array) error {
 func (in *Interp) applyFn(f *fnNode, a, b *Array) (*Array, error) {
 	switch f.kind {
 	case fnUser:
-		if (a == nil) != (f.user.Arity() == 1) {
+		if f.user.Arity() == 0 || a != nil && f.user.Arity() == 1 {
 			return nil, newError(ValenceError)
 		}
 		return in.call(f.user, a, b)
 	case fnEach:
-		return in.each(f.inner, a, b)
+		return in.each(f.left, a, b)
+	case fnSys:
+		if a != nil {
+			return nil, newError(ValenceError)
+		}
+		return in.sysFn(f.glyph, b)
+	case fnOperand:
+		return in.applyFn(in.operand(f.glyph), a, b)
+	case fnDefOp:
+		return in.callOp(f, a, b)
 	}
 	ax, err := in.evalAxis(f)
 	if err != nil {
@@ -327,6 +336,13 @@ func (in *Interp) monad(f *fnNode, ax, x *Array) (*Array, error) {
 		if err != nil {
 			return nil, err
 		}
+		if !f.scalarOperands() {
+			fn := in.dyadicOf(f.left)
+			if f.kind == fnScan {
+				return scanGen(fn, x, k)
+			}
+			return windowsGen(fn, x, k, x.Shape[k], false)
+		}
 		if f.kind == fnScan {
 			return scanAxis(&in.env, f.glyph, x, k)
 		}
@@ -365,13 +381,29 @@ func (in *Interp) dyad(f *fnNode, ax, a, b *Array) (*Array, error) {
 		if err != nil {
 			return nil, err
 		}
+		if !f.scalarOperands() {
+			w, rev, err := window(a, b.Shape[k])
+			if err != nil {
+				return nil, err
+			}
+			return windowsGen(in.dyadicOf(f.left), b, k, w, rev)
+		}
 		return nwise(&in.env, f.glyph, a, b, k)
 	case fnScan:
 		return nil, newError(ValenceError)
 	case fnInner:
-		return inner(&in.env, f.glyph, f.g, a, b)
+		if !f.scalarOperands() {
+			return innerGen(in.dyadicOf(f.left), in.dyadicOf(f.right), a, b)
+		}
+		return inner(&in.env, f.left.glyph, f.right.glyph, a, b)
 	case fnOuter:
-		return outer(&in.env, scalarFns[f.glyph], a, b)
+		if !f.scalarOperands() {
+			return outerGen(in.dyadicOf(f.right), a, b)
+		}
+		return outer(&in.env, scalarFns[f.right.glyph], a, b)
+	}
+	if f.glyph == "⍎" {
+		return nil, newError(ValenceError)
 	}
 	sf, st := scalarFns[f.glyph], structFns[f.glyph]
 	if st != nil && st.dyadAxis != nil {
@@ -406,18 +438,23 @@ func (in *Interp) execute(x *Array) (*Array, error) {
 	}
 	text := b.String()
 	toks, err := Lex(text)
-	var n node
+	var nodes []node
 	if err == nil {
-		n, err = in.parse(toks, len([]rune(text)))
+		nodes, err = in.parseLine(toks, len([]rune(text)), nil)
 	}
-	if err == nil {
+	var v *Array
+	for i, n := range nodes {
 		if _, ok := n.(*branchNode); ok {
 			err = errorAt(DomainError, 0)
 		}
-	}
-	var v *Array
-	if err == nil && n != nil {
-		v, err = in.evalNode(n)
+		if err != nil {
+			break
+		}
+		if i < len(nodes)-1 {
+			_, err = in.run(n)
+		} else if n != nil {
+			v, err = in.evalNode(n)
+		}
 	}
 	if e, ok := err.(*Error); ok && e.Src == "" {
 		e.Src, e.Where = text, "⍎"
