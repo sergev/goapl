@@ -115,7 +115,11 @@ func (in *Interp) run(n node) (int, error) {
 		if v.Size() == 0 {
 			return -1, nil
 		}
-		t, ok := toInt(v.Data[0])
+		d, err := v.numeric()
+		if err != nil {
+			return -1, setPos(err, b.at)
+		}
+		t, ok := toInt(d[0])
 		if !ok {
 			return -1, errorAt(DomainError, b.at)
 		}

@@ -45,12 +45,15 @@
 3/7
 ⍴0/5
 1 0 1/2 3⍴⍳6
+⍝ Any rank; planes of rank 4 are separated by two blank lines
+2 2 2 2⍴⍳16
+⍴2 3 4 5⍴0
+⍴,2 3 4 5⍴0
 ⍝ Errors
 ⍳1 2
 ⍳¯1
 ⍳2.5
 (2 2⍴1)⍴5
-2 2 2 2⍴1
 ¯1⍴5
 1.5⍴5
 (2 2⍴1)⍳1

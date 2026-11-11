@@ -33,9 +33,14 @@ Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
 `Lex` (`lexer.go`) → `Interp.parse` (`parser.go`) → `Interp.run`/`eval`
 (`eval.go`). `Exec` also dispatches `∇` definition mode (`function.go`).
 
-- **Values**: `Array{Shape []int; Data []float64}` (`value.go`), numbers only,
-  rank ≤ `MaxRank` (3). Arrays are immutable once built; indexed assignment
-  copies.
+- **Values**: `Array{Shape, Data, Elems, Proto}` (`value.go`), any rank.
+  A numeric array keeps `Data []float64` (the fast path); a general one
+  keeps `Elems []Value` (`float64`, `Char` or nested `*Array`) and, when
+  empty, its prototype in `Proto`. Build general arrays with `General`,
+  which falls back to numeric when it can; `gather` selects elements for
+  structural functions, `numeric` gives DOMAIN ERROR for general arrays,
+  `axisSplit` views an array as frames along an axis. Arrays are
+  immutable once built; indexed assignment copies.
 - **Parser**: recursive descent read left to right that yields APL's
   right-to-left binding; grammar is in the comment at the top of
   `parser.go`. Parsing needs the workspace function table to classify

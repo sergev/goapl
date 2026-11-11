@@ -170,8 +170,12 @@ func boolVal(b bool) float64 {
 
 // applyMonad applies f to every element.
 func applyMonad(f monadFn, x *Array) (*Array, error) {
-	r := &Array{Shape: x.Shape, Data: make([]float64, len(x.Data))}
-	for i, v := range x.Data {
+	d, err := x.numeric()
+	if err != nil {
+		return nil, err
+	}
+	r := &Array{Shape: x.Shape, Data: make([]float64, len(d))}
+	for i, v := range d {
 		y, err := f(v)
 		if err != nil {
 			return nil, err
@@ -183,6 +187,9 @@ func applyMonad(f monadFn, x *Array) (*Array, error) {
 
 // applyDyad applies f elementwise with scalar (or one-element) extension.
 func applyDyad(f dyadFn, a, b *Array) (*Array, error) {
+	if !a.IsNumeric() || !b.IsNumeric() {
+		return nil, newError(DomainError)
+	}
 	var shape []int
 	switch {
 	case sameShape(a, b):

@@ -25,11 +25,13 @@
 ⍝ An empty inner axis gives the identity of f
 (⍳0)+.×⍳0
 (⍳0)×.+⍳0
+⍝ Results of any rank
+⍴(2 2⍴1)∘.+2 2⍴1
+⍴(2 3 4⍴1)+.×4 5 6⍴1
 ⍝ Errors
 1 2+.×1 2 3
 (2 3⍴1)+.×2 3⍴1
 1 2∘.÷0 1
-(2 2⍴1)∘.+2 2⍴1
 ⍝ Only dyadic scalar functions can be combined
 +.,1
 ,.+1

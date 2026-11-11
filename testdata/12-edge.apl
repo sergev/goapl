@@ -15,10 +15,14 @@ V
 ⍝ Errors inside products
 1 2+.÷0 1
 1 1÷.×0 0
+⍝ Results above rank 3
 (2 2 2⍴1)+.×2 2 2⍴1
-⍝ Selection with too many axes
 M←2 2⍴⍳4
 M[2 2⍴1;2 2⍴1]
++/2 2 2 2⍴⍳16
+A←2 2 2 2⍴⍳16
+A[2;1;2;2]
+A[;;1;1]
 ⍝ Parse errors in nested parts
 (1 2 (3))
 -)

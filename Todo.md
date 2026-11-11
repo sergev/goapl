@@ -6,17 +6,8 @@ Each task ends with: unit tests, a `testdata/` script (or additions to
 one), README updates, and `make test` and `make compare` passing.
 
 Already done: `⍝` comments; `⌈ ⌊ | ⍟` monadic and dyadic; compress `A/B`;
-APL2 error classes and behavior where the original differs (T1).
-
-## T2. Data model
-
-Rework `Array` before adding primitives, so each one is written once:
-
-- Arbitrary rank (remove `MaxRank`).
-- Element types: numbers, characters, and later nested arrays; keep a
-  fast path for all-numeric data.
-- Prototype (fill) element for empty arrays.
-- Shared axis helpers (split an array into frames along axis k).
+APL2 error classes and behavior where the original differs (T1);
+arrays of any rank with general (character, mixed, nested) elements (T2).
 
 ## T3. System variables
 

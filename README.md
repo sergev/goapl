@@ -57,7 +57,7 @@ session, as in the original.
 | Other     | `←` assignment, `A[I;J]` indexing and indexed assignment, `⎕` input/output, `→` branch, labels |
 | Functions | `∇` definitions: niladic, monadic, dyadic, with or without explicit result |
 
-Data are floating-point arrays of rank 0 to 3. Errors are reported by
+Data are floating-point arrays of any rank. Errors are reported by
 APL2 class (`DOMAIN ERROR`, `LENGTH ERROR`, ...). `⍝` starts a comment.
 Comparisons use a tolerance of 1E¯13.
 Indexing is more general than in the original: indices may be arrays

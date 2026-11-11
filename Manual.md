@@ -143,8 +143,7 @@ lengths along each axis, and a *rank*, the number of axes.
 | 2 | matrix | `2 3⍴⍳6` |
 | 3 | three-dimensional array | `2 2 3⍴⍳12` |
 
-Rank is at most 3; a larger rank gives *Greater than three dimensions*.
-An array may be empty: `⍳0` is a vector of length 0.
+Rank has no limit. An array may be empty: `⍳0` is a vector of length 0.
 
 ```apl
       ⍴5
@@ -677,9 +676,10 @@ and small numbers use `E`. Negative numbers have `¯`.
 ¯1E¯7
 ```
 
-A matrix is printed by rows, with each column right-aligned. A
-three-dimensional array is printed as a sequence of matrices separated by
-a blank line. An empty array prints an empty line.
+A matrix is printed by rows, with each column right-aligned. An array of
+rank 3 is printed as a sequence of matrices separated by a blank line;
+each further axis adds one more blank line between its parts. An empty
+array prints an empty line.
 
 ```apl
       2 3⍴1 ¯20 300 4 5 6
@@ -690,6 +690,15 @@ a blank line. An empty array prints an empty line.
 3 4
 
 5 6
+7 8
+      2 2 1 2⍴⍳8
+1 2
+
+3 4
+
+
+5 6
+
 7 8
 ```
 
@@ -929,7 +938,7 @@ LENGTH ERROR
 | INDEX ERROR | `V[0]`, `V[1+⍴V]` |
 | DEFN ERROR | bad function header; redefining a function |
 | NONCE ERROR | a glyph that goapl knows but does not implement yet |
-| SYSTEM LIMIT | rank above 3; more than 1000 nested calls |
+| SYSTEM LIMIT | more than 1000 nested calls |
 | INTERRUPT | `⎕` at end of input |
 
 # Differences from the original
@@ -943,6 +952,7 @@ goapl adds to the language of the Pascal original:
 - `⎕` input evaluates any expression.
 - `⍝` comments.
 - Comparison tolerance.
+- Arrays of any rank (the original stopped at 3).
 
 goapl follows APL2 where the original differs:
 

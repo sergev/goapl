@@ -213,7 +213,6 @@ func TestStructuralErrors(t *testing.T) {
 		{"⍳2.5", DomainError},
 		{"(2 2⍴1)⍳1", RankError},
 		{"(2 2⍴1)⍴1", RankError},
-		{"2 2 2 2⍴1", SystemLimit},
 		{"(2 2⍴1),1", RankError},
 		{"1 2+.×1 2 3", LengthError},
 		{"+.,1", SyntaxError},
@@ -225,7 +224,6 @@ func TestStructuralErrors(t *testing.T) {
 		{"(⍳5)[1;1]", RankError},
 		{"(⍳5)[1", SyntaxError},
 		{"V[1]←2", ValueError},
-		{"(2 2⍴⍳4)∘.+2 2⍴1", SystemLimit},
 	}
 	for _, c := range cases {
 		err := New(&bytes.Buffer{}).Exec(c.in)

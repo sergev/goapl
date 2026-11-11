@@ -23,6 +23,23 @@ func toInt(v float64) (int, bool) {
 	return int(r), true
 }
 
+// toInts converts a numeric array to non-negative integers.
+func toInts(a *Array) ([]int, error) {
+	d, err := a.numeric()
+	if err != nil {
+		return nil, err
+	}
+	r := make([]int, len(d))
+	for i, v := range d {
+		n, ok := toInt(v)
+		if !ok || n < 0 {
+			return nil, newError(DomainError)
+		}
+		r[i] = n
+	}
+	return r, nil
+}
+
 // interval is ⍳N: 1 2 ... N.
 func interval(x *Array) (*Array, error) {
 	if x.Rank() > 1 {
@@ -31,14 +48,11 @@ func interval(x *Array) (*Array, error) {
 	if x.Size() != 1 {
 		return nil, newError(LengthError)
 	}
-	if x.Data[0] < 0 {
-		return nil, newError(DomainError)
+	n, err := toInts(x)
+	if err != nil {
+		return nil, err
 	}
-	n, ok := toInt(x.Data[0])
-	if !ok {
-		return nil, newError(DomainError)
-	}
-	r := make([]float64, n)
+	r := make([]float64, n[0])
 	for i := range r {
 		r[i] = float64(i + 1)
 	}
@@ -53,7 +67,9 @@ func shapeOf(x *Array) (*Array, error) {
 	return Vector(r), nil
 }
 
-func ravel(x *Array) (*Array, error) { return Vector(x.Data), nil }
+func ravel(x *Array) (*Array, error) {
+	return &Array{Shape: []int{x.Size()}, Data: x.Data, Elems: x.Elems, Proto: x.Proto}, nil
+}
 
 // indexOf is A⍳B: position of each B in vector A, or 1+⍴A if absent.
 func indexOf(a, b *Array) (*Array, error) {
@@ -61,10 +77,11 @@ func indexOf(a, b *Array) (*Array, error) {
 		return nil, newError(RankError)
 	}
 	r := &Array{Shape: b.Shape, Data: make([]float64, b.Size())}
-	for i, v := range b.Data {
+	for i := range r.Data {
+		v := b.At(i)
 		r.Data[i] = float64(a.Size() + 1)
-		for j, w := range a.Data {
-			if tolEq(v, w) {
+		for j := range a.Size() {
+			if match(v, a.At(j)) {
 				r.Data[i] = float64(j + 1)
 				break
 			}
@@ -73,32 +90,23 @@ func indexOf(a, b *Array) (*Array, error) {
 	return r, nil
 }
 
-// reshape is A⍴B, cycling B; an empty B fills with zeros.
+// reshape is A⍴B, cycling B; an empty B gives its fill element.
 func reshape(a, b *Array) (*Array, error) {
 	if a.Rank() > 1 {
 		return nil, newError(RankError)
 	}
-	shape := make([]int, a.Size())
-	for i, v := range a.Data {
-		if v < 0 {
-			return nil, newError(DomainError)
-		}
-		n, ok := toInt(v)
-		if !ok {
-			return nil, newError(DomainError)
-		}
-		shape[i] = n
+	shape, err := toInts(a)
+	if err != nil {
+		return nil, err
 	}
-	if len(shape) > MaxRank {
-		return nil, newError(SystemLimit)
-	}
-	r := &Array{Shape: shape, Data: make([]float64, shapeSize(shape))}
-	if b.Size() > 0 {
-		for i := range r.Data {
-			r.Data[i] = b.Data[i%b.Size()]
+	pos := make([]int, shapeSize(shape))
+	for i := range pos {
+		pos[i] = -1
+		if b.Size() > 0 {
+			pos[i] = i % b.Size()
 		}
 	}
-	return r, nil
+	return b.gather(shape, pos), nil
 }
 
 // catenate is A,B for scalars and vectors.
@@ -106,9 +114,15 @@ func catenate(a, b *Array) (*Array, error) {
 	if a.Rank() > 1 || b.Rank() > 1 {
 		return nil, newError(RankError)
 	}
-	r := make([]float64, 0, a.Size()+b.Size())
-	r = append(r, a.Data...)
-	return Vector(append(r, b.Data...)), nil
+	n := a.Size() + b.Size()
+	if a.IsNumeric() && b.IsNumeric() {
+		r := make([]float64, 0, n)
+		r = append(r, a.Data...)
+		return Vector(append(r, b.Data...)), nil
+	}
+	r := make([]Value, 0, n)
+	r = append(r, a.elems()...)
+	return General([]int{n}, append(r, b.elems()...), a.Fill()), nil
 }
 
 // indexPositions returns flat offsets selected by idx (nil = whole axis)
@@ -128,8 +142,12 @@ func indexPositions(shape []int, idx []*Array) ([]int, []int, error) {
 			}
 			rshape = append(rshape, shape[k])
 		} else {
-			sel = make([]int, ix.Size())
-			for i, v := range ix.Data {
+			d, err := ix.numeric()
+			if err != nil {
+				return nil, nil, err
+			}
+			sel = make([]int, len(d))
+			for i, v := range d {
 				n, ok := toInt(v)
 				if !ok {
 					return nil, nil, newError(DomainError)
@@ -158,14 +176,7 @@ func index(x *Array, idx []*Array) (*Array, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(shape) > MaxRank {
-		return nil, newError(SystemLimit)
-	}
-	r := &Array{Shape: shape, Data: make([]float64, len(pos))}
-	for i, p := range pos {
-		r.Data[i] = x.Data[p]
-	}
-	return r, nil
+	return x.gather(shape, pos), nil
 }
 
 // indexAssign returns a copy of x with X[I;J;...]←v applied.
@@ -174,18 +185,27 @@ func indexAssign(x *Array, idx []*Array, v *Array) (*Array, error) {
 	if err != nil {
 		return nil, err
 	}
-	if v.Size() != 1 && !sameShape(v, &Array{Shape: shape}) {
+	if v.Size() != 1 && !equalShape(v.Shape, shape) {
 		return nil, newError(LengthError)
 	}
-	r := &Array{Shape: x.Shape, Data: append([]float64(nil), x.Data...)}
-	for i, p := range pos {
+	elem := func(i int) int {
 		if v.Size() == 1 {
-			r.Data[p] = v.Data[0]
-		} else {
-			r.Data[p] = v.Data[i]
+			return 0
 		}
+		return i
 	}
-	return r, nil
+	if x.IsNumeric() && v.IsNumeric() {
+		r := &Array{Shape: x.Shape, Data: append([]float64(nil), x.Data...)}
+		for i, p := range pos {
+			r.Data[p] = v.Data[elem(i)]
+		}
+		return r, nil
+	}
+	r := append([]Value(nil), x.elems()...)
+	for i, p := range pos {
+		r[p] = v.At(elem(i))
+	}
+	return General(x.Shape, r, x.Fill()), nil
 }
 
 // compress is A/B along the last axis; A gives a repeat count per item.
@@ -194,39 +214,35 @@ func compress(a, b *Array) (*Array, error) {
 		return nil, newError(RankError)
 	}
 	if b.IsScalar() {
-		b = Vector(b.Data)
+		b = &Array{Shape: []int{1}, Data: b.Data, Elems: b.Elems}
 	}
-	n := b.Shape[b.Rank()-1]
-	counts := make([]int, n)
-	for i := range counts {
-		v := a.Data[0]
-		if a.Size() != 1 {
-			if a.Size() != n {
-				return nil, newError(LengthError)
-			}
-			v = a.Data[i]
+	k := b.Rank() - 1
+	outer, n, _ := axisSplit(b.Shape, k)
+	counts, err := toInts(a)
+	if err != nil {
+		return nil, err
+	}
+	if len(counts) == 1 && n != 1 {
+		c := counts[0]
+		counts = make([]int, n)
+		for i := range counts {
+			counts[i] = c
 		}
-		if v < 0 {
-			return nil, newError(DomainError)
-		}
-		c, ok := toInt(v)
-		if !ok {
-			return nil, newError(DomainError)
-		}
-		counts[i] = c
+	} else if len(counts) != n {
+		return nil, newError(LengthError)
 	}
 	total := 0
 	for _, c := range counts {
 		total += c
 	}
-	shape := append(append([]int(nil), b.Shape[:b.Rank()-1]...), total)
-	r := &Array{Shape: shape, Data: make([]float64, 0, shapeSize(shape))}
-	for row := 0; row < b.Size(); row += n {
-		for i, c := range counts {
+	shape := append(append([]int(nil), b.Shape[:k]...), total)
+	pos := make([]int, 0, outer*total)
+	for i := range outer {
+		for j, c := range counts {
 			for range c {
-				r.Data = append(r.Data, b.Data[row+i])
+				pos = append(pos, i*n+j)
 			}
 		}
 	}
-	return r, nil
+	return b.gather(shape, pos), nil
 }
