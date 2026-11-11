@@ -1,0 +1,81 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+goapl is an APL interpreter in Go. It reimplements the 1978 Pascal APL
+interpreter from *Pascal News* #26 (source in `../../Besm-6/pascal-apl/`,
+`pnscanner.pas`), then grows toward APL2. `Todo.md` lists the next tasks
+(T1–T13); `Manual.md` is the language specification.
+
+## Commands
+
+```sh
+make                 # build ./goapl
+make test            # go vet + go test ./...
+go test ./apl -run TestParity/reduce_plus   # one test or subtest
+go test ./apl -run TestGolden -update       # regenerate testdata/*.out
+go test ./apl -run TestManual -update       # regenerate examples in Manual.md
+make compare PROTO=/home/vak/Project/Besm-6/pascal-apl   # diff against the Pascal original (needs fpc)
+make pdf             # Manual.pdf via pandoc + typst
+```
+
+After `-update`, review the diff: the expected outputs are generated from
+goapl itself.
+
+## Architecture
+
+All of the interpreter is package `apl`; `cmd/goapl` is a thin CLI
+(prompt when stdin is a tty, color when stdout is a tty and `NO_COLOR` unset).
+
+Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
+`Lex` (`lexer.go`) → `Interp.parse` (`parser.go`) → `Interp.run`/`eval`
+(`eval.go`). `Exec` also dispatches `∇` definition mode (`function.go`).
+
+- **Values**: `Array{Shape []int; Data []float64}` (`value.go`), numbers only,
+  rank ≤ `MaxRank` (3). Arrays are immutable once built; indexed assignment
+  copies.
+- **Parser**: recursive descent read left to right that yields APL's
+  right-to-left binding; grammar is in the comment at the top of
+  `parser.go`. Parsing needs the workspace function table to classify
+  names (variable vs niladic/monadic/dyadic user function), so user
+  function bodies are lexed at definition but parsed at run time and cached
+  per statement, invalidated by `Interp.fnGen`.
+- **Primitives**: scalar (pervasive) functions are table-driven in
+  `scalar.go` (`scalarFns`: glyph → monad/dyad); structural ones in
+  `structural.go` (`structFns`); reduce, inner and outer product in
+  `operators.go`. Operators accept only dyadic scalar functions.
+- **User functions**: `Interp.call` implements dynamic scoping by saving
+  and restoring globals for args, result, `;locals` and labels; labels are
+  local constants equal to their line number; `→` returns a target from
+  `run`, out-of-range ends the call.
+- **Errors**: `*Error{Code, Pos, Src, Where}` (`errors.go`). Codes index the
+  original program's 100-entry message table (`Messages`, sentence case;
+  16 and 18 are goapl additions). Errors propagate as Go errors to the top;
+  `setPos`/`withSrc`/`locate` fill in position, source line and `F[n]`,
+  and `Interp.report` prints message, line and caret.
+
+## Tests
+
+- `apl/*_test.go`: unit tests, mostly checking error codes.
+- `testdata/NN-*.apl` + `.out`: golden session transcripts per feature
+  area, run with `Prompt` and `Echo` set (`golden_test.go`). `⍝` comments
+  label each group.
+- `apl/parity_test.go`: every case from the original's test suite;
+  deliberate differences are marked `differs_*`.
+- `apl/manual_test.go`: every ```` ```apl ```` block in `Manual.md` is run as a
+  session and must match. Non-session blocks use ```` ```text ````. An output
+  line starting with 6 spaces would be read as input, so avoid such examples.
+- `tools/compare_cases.txt`: cases for `make compare`; `!` marks a known
+  difference with the reason in the comment above it.
+
+## Conventions
+
+- Match the original's behavior and error codes unless it is a bug; record
+  each deviation in `parity_test.go`, `tools/compare_cases.txt` and the
+  "Differences from the original" section of `Manual.md`.
+- When the language changes, update `Manual.md` (examples are tested), the
+  README language table, and add cases to the matching `testdata` script.
+- Commit messages: a single short subject line, no body, no
+  `Co-Authored-By`.

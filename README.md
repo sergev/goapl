@@ -128,3 +128,7 @@ and review the diff.
 
 Steps 1–5 done: the language of the original is implemented and passes
 the prototype's test suite. Next: growing toward APL2 (step 6).
+
+## License
+
+MIT License; see [LICENSE](LICENSE).
