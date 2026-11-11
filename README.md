@@ -17,6 +17,7 @@ make            # build ./goapl
 make test       # go vet + unit and golden tests
 make install    # install to /usr/local/bin (override with PREFIX=...)
 make clean
+make compare PROTO=/path/to/pascal-apl   # compare with the Pascal original
 ```
 
 ## Usage
@@ -100,7 +101,15 @@ R←R×I
 is run and its output compared with the matching `.out` file.
 `apl/parity_test.go` ports every case of the prototype's
 `tests/run_symbol_tests.py`, covering all 89 glyphs of its character set;
-the few deliberate differences are marked there. After an
+the few deliberate differences are marked there.
+
+`make compare` builds the Pascal prototype with Free Pascal (into `build/`)
+and runs the cases of `tools/compare_cases.txt` through both interpreters,
+comparing printed numbers (the original shows two decimals) and error
+messages. Known differences are marked with `!` and explained in that file.
+They come from bugs in the original: it cannot use or display a
+function's explicit result, crashes on `⎕` input, computes `¯2*2` as 0.25,
+and misses an unclosed parenthesis. After an
 intended change in output, regenerate them with `go test ./apl -update`
 and review the diff.
 

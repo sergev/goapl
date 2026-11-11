@@ -9,11 +9,16 @@ install: all
 	install -m 755 $(BIN) $(DESTDIR)$(PREFIX)/bin/
 
 clean:
-	rm -f $(BIN)
+	rm -rf $(BIN) build
 	go clean
 
 test:
 	go vet ./...
 	go test ./...
 
-.PHONY: all install clean test
+# Compare with the Pascal prototype; needs fpc and its source directory.
+compare: all
+	@test -n "$(PROTO)" || { echo "usage: make compare PROTO=/path/to/pascal-apl"; exit 1; }
+	python3 tools/compare.py $(PROTO) ./$(BIN) tools/compare_cases.txt
+
+.PHONY: all install clean test compare

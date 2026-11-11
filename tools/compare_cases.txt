@@ -1,0 +1,113 @@
+# Cases for compare.py: statements separated by " ⋄ ".
+# "!" marks a known difference; the comment above it says why.
+
+# Scalar functions
+1+2
+2×3+4
+1 2 3+4 5 6
+10×1 2 3
+¯1.5×2
+×¯3 0 5
+÷4
+*1
+2*0.5
+2*¯1
+# Prototype computes ¯2*2 as 1÷2*2.
+!¯2*2
+~1 0 1
+1 2 3=1 5 3
+1 2 3≤2
+1 1 0∧1 0 0
+1 0 0∨0 0 1
+A←1 2 3 ⋄ B←A×A ⋄ B-A
+X←2 ⋄ Y←X+1 ⋄ X×Y
+(1+2)×3
+
+# Reduction
++/1 2 3 4
+-/10 3 2
+×/2 3 4
+÷/8 2
+*/2 3
+⌈/3 9 2
+⌊/3 9 2
+○/10 1000
+○/2 8
+=/1 1 1
+≠/1 2 1
++/2 3⍴⍳6
+
+# Structural
+⍳5
+⍳0
+⍴1 2 3
+⍴2 3⍴⍳6
+2 3⍴⍳6
+2 3 4⍴⍳24
+,2 2⍴1 2 3 4
+1 2 3⍳2
+10 20 30⍳20 40
+3⍴1 2
+5⍴7
+1 2,3 4
+5,⍳3
+1,2
+
+# Products
+(2 3⍴⍳6)+.×3 2⍴⍳6
+1 2 3+.×4 5 6
+1+.×2
+1 2 3∘.×1 2 3 4
+2∘.×3
+(⍳3)∘.=⍳3
+
+# Indexing
+M←3 4⍴⍳12 ⋄ M[2;3]
+V←10 20 30 ⋄ V[2]
+V←10 20 30 ⋄ V[2]←5 ⋄ V
+M←2 2⍴⍳4 ⋄ M[1;2]←9 ⋄ M
+
+# Errors
+8÷0
+÷0
+~2
+1 2+1 2 3
++/5
++/,5
+⍳¯1
+⍳2.5
+(2 2⍴1),1
+(2 2⍴1)⍴1
+1 2 3+.×1 2
+V←⍳3 ⋄ V[4]
+V←⍳3 ⋄ V[1.5]
+1+2)
+# Prototype misses an unclosed "(" and prints 3.
+!(1+2
+# Prototype reports this error twice (also INVALID CHARACTER ENCOUNTERED).
+!¯A
+# Prototype says INVALID EXPRESSION; its message 100 is never used.
+!UNDEF
+!1+UNDEF
+1.+2
+
+# User functions; the prototype runs calls only as whole statements
+# and does not display an explicit result, so bodies print instead.
+∇A PLUS B ⋄ A+B ⋄ ∇ ⋄ 2 PLUS 3
+∇F N ⋄ N ⋄ →4 ⋄ N+100 ⋄ N+1 ⋄ ∇ ⋄ F 5
+∇F N ⋄ →(N>1)×3 ⋄ →0 ⋄ N ⋄ ∇ ⋄ F 5 ⋄ F 0
+∇F N ⋄ L:N ⋄ ∇ ⋄ F 5
+∇F N ⋄ N ⋄ →(N>1)×4 ⋄ →0 ⋄ F N-1 ⋄ ∇ ⋄ F 3
+∇F ⋄ ⎕←7 ⋄ ∇ ⋄ F
+∇F N ⋄ N ⋄ ∇ ⋄ ∇G N ⋄ N+1 ⋄ ∇ ⋄ G 1 ⋄ F 1
+∇F N ⋄ N×2 ⋄ ∇ ⋄ N←7 ⋄ F 3 ⋄ N
+# After a rejected header, the body runs as immediate lines; N is then
+# undefined (INVALID EXPRESSION vs VARIABLE NOT ASSIGNED A VALUE, as above).
+!∇F N ⋄ N ⋄ ∇ ⋄ ∇F N ⋄ N ⋄ ∇
+∇F N ⋄ N ⋄ ∇ ⋄ ∇F N ⋄ 1 ⋄ ∇
+# Prototype does not display an explicit result.
+!∇R←FACT N ⋄ R←×/⍳N ⋄ ∇ ⋄ FACT 5
+# Prototype cannot use a function result in an expression (error 17).
+!∇R←SQ X ⋄ R←X×X ⋄ ∇ ⋄ 1+SQ 3
+# Prototype crashes on ⎕ input (runtime error 216).
+!X←⎕ ⋄ 1 2 3 ⋄ X+1
