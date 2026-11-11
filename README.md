@@ -15,7 +15,7 @@ Requires Go 1.27 or later.
 ```sh
 make            # build ./goapl
 make test       # go vet + unit and golden tests
-make install    # install to /usr/local/bin (override with PREFIX=...)
+make install    # install to ~/.local/bin (override with PREFIX=...)
 make clean
 make compare PROTO=/path/to/pascal-apl   # compare with the Pascal original
 ```
