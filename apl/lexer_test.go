@@ -50,13 +50,13 @@ func TestLexErrors(t *testing.T) {
 	}
 	for _, c := range cases {
 		_, err := Lex(c.in)
-		le, ok := err.(*LexError)
+		le, ok := err.(*Error)
 		if !ok {
-			t.Errorf("Lex(%q): got %v, want LexError", c.in, err)
+			t.Errorf("Lex(%q): got %v, want *Error", c.in, err)
 			continue
 		}
-		if le.Msg != Messages[c.code] || le.Pos != c.pos {
-			t.Errorf("Lex(%q) = %q at %d, want %q at %d", c.in, le.Msg, le.Pos, Messages[c.code], c.pos)
+		if le.Code != c.code || le.Pos != c.pos {
+			t.Errorf("Lex(%q) = code %d at %d, want %d at %d", c.in, le.Code, le.Pos, c.code, c.pos)
 		}
 	}
 }

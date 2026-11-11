@@ -1,0 +1,211 @@
+package apl
+
+// Grammar, read left to right but binding right to left:
+//
+//	expr    := fn expr | name ← expr | operand [fn expr]
+//	operand := number | name | ( expr )
+//	fn      := prim | prim /
+
+type node interface{ pos() int }
+
+type constNode struct {
+	val *Array
+	at  int
+}
+
+type varNode struct {
+	name string
+	at   int
+}
+
+type assignNode struct {
+	name  string
+	at    int
+	right node
+}
+
+type monadNode struct {
+	fn    *fnNode
+	right node
+}
+
+type dyadNode struct {
+	fn          *fnNode
+	left, right node
+}
+
+type fnKind int
+
+const (
+	fnPrim   fnKind = iota // primitive function
+	fnReduce               // f/
+)
+
+type fnNode struct {
+	kind  fnKind
+	glyph string
+	at    int
+}
+
+func (n *constNode) pos() int  { return n.at }
+func (n *varNode) pos() int    { return n.at }
+func (n *assignNode) pos() int { return n.at }
+func (n *monadNode) pos() int  { return n.fn.at }
+func (n *dyadNode) pos() int   { return n.left.pos() }
+
+type parser struct {
+	toks []Token
+	i    int
+	end  int // rune offset of end of line
+}
+
+// Parse parses one statement; returns nil for an empty line.
+func Parse(line string) (node, error) {
+	toks, err := Lex(line)
+	if err != nil {
+		return nil, err
+	}
+	if len(toks) == 0 {
+		return nil, nil
+	}
+	p := &parser{toks: toks, end: len([]rune(line))}
+	n, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+	if t, ok := p.peek(); ok {
+		if t.Kind == Special && t.Text == ")" {
+			return nil, errorAt(15, t.Pos)
+		}
+		return nil, errorAt(10, t.Pos)
+	}
+	return n, nil
+}
+
+func (p *parser) peek() (Token, bool) {
+	if p.i < len(p.toks) {
+		return p.toks[p.i], true
+	}
+	return Token{}, false
+}
+
+func (p *parser) peekAt(k int) (Token, bool) {
+	if p.i+k < len(p.toks) {
+		return p.toks[p.i+k], true
+	}
+	return Token{}, false
+}
+
+// here returns the position of the next token, or end of line.
+func (p *parser) here() int {
+	if t, ok := p.peek(); ok {
+		return t.Pos
+	}
+	return p.end
+}
+
+func isSpecial(t Token, s string) bool { return t.Kind == Special && t.Text == s }
+
+// atExprEnd reports whether the current expression ends here.
+func (p *parser) atExprEnd() bool {
+	t, ok := p.peek()
+	return !ok || isSpecial(t, ")") || isSpecial(t, "]") || isSpecial(t, ";")
+}
+
+func (p *parser) atFn() bool {
+	t, ok := p.peek()
+	return ok && t.Kind == Prim
+}
+
+func (p *parser) expr() (node, error) {
+	if p.atExprEnd() {
+		return nil, errorAt(10, p.here())
+	}
+	if p.atFn() {
+		f, err := p.fn()
+		if err != nil {
+			return nil, err
+		}
+		r, err := p.expr()
+		if err != nil {
+			return nil, err
+		}
+		return &monadNode{fn: f, right: r}, nil
+	}
+	t, _ := p.peek()
+	if next, ok := p.peekAt(1); ok && t.Kind == Name && isSpecial(next, "←") {
+		p.i += 2
+		r, err := p.expr()
+		if err != nil {
+			return nil, err
+		}
+		return &assignNode{name: t.Text, at: t.Pos, right: r}, nil
+	}
+	left, err := p.operand()
+	if err != nil {
+		return nil, err
+	}
+	if p.atExprEnd() {
+		return left, nil
+	}
+	if !p.atFn() {
+		return nil, errorAt(10, p.here())
+	}
+	f, err := p.fn()
+	if err != nil {
+		return nil, err
+	}
+	r, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+	return &dyadNode{fn: f, left: left, right: r}, nil
+}
+
+func (p *parser) fn() (*fnNode, error) {
+	t, _ := p.peek()
+	p.i++
+	if t.Text == "/" {
+		return nil, errorAt(72, t.Pos)
+	}
+	if next, ok := p.peek(); ok && next.Kind == Prim && next.Text == "/" {
+		p.i++
+		g := t.Text
+		if g == "○" {
+			g = "⍟" // prototype quirk: ○/ is log to base
+		}
+		if sf := scalarFns[g]; sf == nil || sf.dyad == nil {
+			return nil, errorAt(72, t.Pos)
+		}
+		return &fnNode{kind: fnReduce, glyph: g, at: t.Pos}, nil
+	}
+	return &fnNode{kind: fnPrim, glyph: t.Text, at: t.Pos}, nil
+}
+
+func (p *parser) operand() (node, error) {
+	t, _ := p.peek()
+	switch {
+	case t.Kind == Number:
+		p.i++
+		v := Vector(t.Nums)
+		if len(t.Nums) == 1 {
+			v = Scalar(t.Nums[0])
+		}
+		return &constNode{val: v, at: t.Pos}, nil
+	case t.Kind == Name:
+		p.i++
+		return &varNode{name: t.Text, at: t.Pos}, nil
+	case isSpecial(t, "("):
+		p.i++
+		n, err := p.expr()
+		if err != nil {
+			return nil, err
+		}
+		if c, ok := p.peek(); !ok || !isSpecial(c, ")") {
+			return nil, errorAt(15, t.Pos)
+		}
+		p.i++
+		return n, nil
+	}
+	return nil, errorAt(10, t.Pos)
+}

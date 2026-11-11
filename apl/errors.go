@@ -1,8 +1,6 @@
 // Error messages from the prototype APLfile, indexed 1..100.
 package apl
 
-import "fmt"
-
 // Messages holds the prototype error texts; index 0 is unused.
 var Messages = [...]string{
 	0:   "",
@@ -108,9 +106,19 @@ var Messages = [...]string{
 	100: "VARIABLE NOT ASSIGNED A VALUE",
 }
 
-// Error is a runtime APL error with a prototype message code.
+// NoPos marks an error without a known source position.
+const NoPos = -1
+
+// Error is an APL error with a prototype message code.
 type Error struct {
 	Code int
+	Pos  int // rune offset in the line, or NoPos
 }
 
-func (e *Error) Error() string { return fmt.Sprintf("%d %s", e.Code, Messages[e.Code]) }
+func (e *Error) Error() string { return Messages[e.Code] }
+
+// newError returns an error without position.
+func newError(code int) *Error { return &Error{Code: code, Pos: NoPos} }
+
+// errorAt returns an error at rune offset pos.
+func errorAt(code, pos int) *Error { return &Error{Code: code, Pos: pos} }

@@ -45,12 +45,15 @@ session, as in the original.
 |-----------|--------|
 | Monadic   | `+` identity, `-` negate, `×` signum, `÷` reciprocal, `*` exp, `~` not, `⍳` index generator, `⍴` shape, `,` ravel |
 | Dyadic    | `+ - × ÷ *`, `⍳` index of, `⍴` reshape, `,` catenate, `= ≠ < ≤ ≥ >`, `∧ ∨` |
-| Operators | `f/` reduction (also `⌈ ⌊ ○`), `f.g` inner product, `∘.f` outer product |
+| Operators | `f/` reduction (also `⌈ ⌊ ○`; `○/` is log to base, as in the original), `f.g` inner product, `∘.f` outer product |
+| Added     | `⌈ ⌊` ceiling/floor, max/min; `\|` magnitude/residue; `⍟` natural log, log to base |
 | Other     | `←` assignment, `A[I;J]` indexing and indexed assignment, `⎕` input/output, `→` branch, labels |
 | Functions | `∇` definitions: niladic, monadic, dyadic, with or without explicit result |
 
 Data are floating-point arrays of rank 0 to 3. Errors use the numbered
-messages of the original `APLfile`.
+messages of the original `APLfile`. Comparisons use a tolerance of 1E¯13.
+Output uses conventional APL notation (10 significant digits, `¯` for
+negative numbers) rather than the original fixed-width columns.
 
 ## Roadmap
 
@@ -62,6 +65,13 @@ messages of the original `APLfile`.
 6. Toward APL2: characters, arbitrary rank, more primitives and operators,
    comments, system commands.
 
+## Tests
+
+`make test` runs unit tests and golden tests: each `testdata/*.apl` script
+is run and its output compared with the matching `.out` file. After an
+intended change in output, regenerate them with `go test ./apl -update`
+and review the diff.
+
 ## Status
 
-Step 1: the interpreter currently tokenizes input and prints the tokens.
+Step 2 done: scalar functions, reduction, assignment, parentheses.

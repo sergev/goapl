@@ -2,7 +2,6 @@
 package apl
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"unicode"
@@ -50,14 +49,6 @@ const (
 // MaxNameLength is the identifier length limit of the prototype.
 const MaxNameLength = 10
 
-// LexError reports a lexical error at a rune position.
-type LexError struct {
-	Pos int
-	Msg string
-}
-
-func (e *LexError) Error() string { return e.Msg }
-
 // Lex splits a line into tokens.
 func Lex(line string) ([]Token, error) {
 	src := []rune(line)
@@ -96,7 +87,7 @@ func Lex(line string) ([]Token, error) {
 				i++
 			}
 			if i-start > MaxNameLength {
-				return nil, &LexError{start, Messages[70]}
+				return nil, errorAt(70, start)
 			}
 			toks = append(toks, Token{Kind: Name, Pos: start, Text: string(src[start:i])})
 		case strings.ContainsRune(primGlyphs, c):
@@ -106,7 +97,7 @@ func Lex(line string) ([]Token, error) {
 			toks = append(toks, Token{Kind: Special, Pos: i, Text: string(c)})
 			i++
 		default:
-			return nil, &LexError{i, Messages[4]}
+			return nil, errorAt(4, i)
 		}
 	}
 	return toks, nil
@@ -119,7 +110,7 @@ func lexNumber(src []rune, i int) (float64, int, error) {
 		b.WriteByte('-')
 		i++
 		if i >= len(src) || !(isDigit(src[i]) || src[i] == '.') {
-			return 0, i, &LexError{i, Messages[1]}
+			return 0, i, errorAt(1, i)
 		}
 	}
 	for i < len(src) && isDigit(src[i]) {
@@ -130,7 +121,7 @@ func lexNumber(src []rune, i int) (float64, int, error) {
 		b.WriteByte('.')
 		i++
 		if i >= len(src) || !isDigit(src[i]) {
-			return 0, i, &LexError{i, Messages[2]}
+			return 0, i, errorAt(2, i)
 		}
 		for i < len(src) && isDigit(src[i]) {
 			b.WriteRune(src[i])
@@ -152,7 +143,7 @@ func lexNumber(src []rune, i int) (float64, int, error) {
 	}
 	v, err := strconv.ParseFloat(b.String(), 64)
 	if err != nil {
-		return 0, i, &LexError{i, fmt.Sprintf("bad number %q", b.String())}
+		return 0, i, errorAt(10, i)
 	}
 	return v, i, nil
 }
