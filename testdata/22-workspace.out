@@ -1,0 +1,130 @@
+      ⍝ A new session is a clear workspace
+      )WSID
+CLEAR WS
+      )FNS
+      )VARS
+      ⍝ )FNS and )VARS list names, from a given one on
+      X←1 2 3
+      M←2 3⍴'ABCDEF'
+      N←1 (2 3) ('AB' (4 5))
+      E←⍳0
+      C←''
+      S←'Q'
+      V←,5
+      F←0.1 ¯2.5E¯20 1E300
+      G←2 0⍴0
+      H←0⍴⊂1 2
+      J←1 'A' 2.5
+      K←⊂⊂1 2
+      ∇R←FACT N
+[1] R←×/⍳N ⍝ it's a comment
+[2] ∇
+      ∇R←(F TWICE) Y
+[1] R←F F Y
+[2] ∇
+      )FNS
+FACT TWICE
+      )VARS
+C E F G H J K M N S V X
+      )VARS M
+M N S V X
+      ⍝ A clear workspace needs a name to be saved
+      )SAVE
+NOT SAVED, THIS WS IS CLEAR WS
+      ⎕IO←0
+      ⎕LX←'''WELCOME'''
+      )SAVE DEMO
+SAVED DEMO
+      )WSID
+DEMO
+      ⍝ )CLEAR starts afresh, with default system variables
+      )CLEAR
+CLEAR WS
+      )VARS
+      ⎕IO
+1
+      ⍝ )LOAD restores everything and runs ⎕LX
+      )LOAD DEMO
+LOADED DEMO
+WELCOME
+      )WSID
+DEMO
+      ⎕IO
+0
+      ⎕IO←1
+      FACT 5
+120
+      -TWICE 3
+3
+      X M N E C S V F G H J K
+ 1 2 3  ABC  1  2 3   AB  4 5     Q  5  0.1 ¯2.5E¯20 1E300      1 A 2.5    1 2
+        DEF
+      ⍴¨E C S V G H
+ 0  0    1  2 0  0
+      ≡K
+3
+      X≡1 2 3
+1
+      N≡1 (2 3) ('AB' (4 5))
+1
+      F=0.1 ¯2.5E¯20 1E300
+1 1 1
+      ⍝ )SAVE without a name uses the workspace name
+      X←4 5 6
+      )SAVE
+SAVED DEMO
+      ⍝ )ERASE removes names
+      )ERASE X FACT ZZ
+NOT FOUND: ZZ
+      )VARS X
+      )FNS
+TWICE
+      ⍝ )COPY brings objects from a saved workspace
+      )COPY DEMO X FACT QQ
+NOT FOUND: QQ
+      X
+4 5 6
+      FACT 4
+24
+      )ERASE X
+      )COPY DEMO
+      X
+4 5 6
+      ⍝ )WSID changes the name
+      )WSID OTHER
+WAS DEMO
+      )WSID
+OTHER
+      ⍝ A suspended function prevents )SAVE; )CLEAR clears the suspension
+      ∇R←BAD
+[1] R←1÷0
+[2] ∇
+      BAD
+DOMAIN ERROR
+BAD[1] R←1÷0
+          ^
+      )SAVE
+NOT SAVED, WS HAS SUSPENDED FUNCTIONS
+      )SI
+BAD[1] *
+      )CLEAR
+CLEAR WS
+      )SI
+      )VARS
+      ⍝ Errors
+      )LOAD NOSUCH
+WS NOT FOUND
+      )COPY NOSUCH
+WS NOT FOUND
+      )WSID A B
+INCORRECT COMMAND
+      )FOO
+INCORRECT COMMAND
+      )LOAD
+INCORRECT COMMAND
+      ⎕LX←1 2
+DOMAIN ERROR
+⎕LX←1 2
+^
+      ⍝ )OFF ends the session
+      )OFF

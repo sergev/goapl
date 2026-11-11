@@ -20,6 +20,10 @@ type Interp struct {
 	noSuspend   int                  // >0 while errors must not suspend (⎕EA)
 	lastErr     *Error               // last error, for ⎕EM and ⎕ET
 	interrupted atomic.Bool          // set by Interrupt (Ctrl-C)
+	lx          *Array               // ⎕LX latent expression
+	wsid        string               // workspace name, "" for a clear workspace
+	atTop       func()               // to run when the state indicator is cleared
+	off         bool                 // )OFF was given
 	depth       int                  // user function call depth
 	out         io.Writer
 	input       *bufio.Scanner // source of ⎕ input
@@ -32,6 +36,7 @@ type Interp struct {
 // New returns an interpreter writing to out.
 func New(out io.Writer) *Interp {
 	return &Interp{
+		lx:   Chars(""),
 		env:  defaultEnv(),
 		vars: map[string]*Array{},
 		fns:  map[string]*Function{},
@@ -136,6 +141,8 @@ func (in *Interp) getVar(name string) (*Array, bool) {
 		return in.errorMessage(), true
 	case "⎕ET":
 		return in.errorType(), true
+	case "⎕LX":
+		return in.lx, true
 	}
 	if isSysName(name) {
 		return in.env.get(name), true
@@ -148,6 +155,13 @@ func (in *Interp) getVar(name string) (*Array, bool) {
 func (in *Interp) setVar(name string, v *Array) error {
 	if readOnly[name] {
 		return newError(SyntaxError)
+	}
+	if name == "⎕LX" {
+		if v.Rank() > 1 || v.Size() > 0 && !v.IsCharacter() {
+			return newError(DomainError)
+		}
+		in.lx = &Array{Shape: []int{v.Size()}, Elems: v.elems(), Proto: Char(' ')}
+		return nil
 	}
 	if isSysName(name) {
 		return in.env.set(name, v)

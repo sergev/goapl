@@ -29,6 +29,7 @@ session transcripts checked by `make test`.
 ```sh
 goapl                 # interactive, reads statements from stdin
 goapl file.apl ...    # run script files
+goapl -i ws.apl       # run a file (e.g. a saved workspace), then a session
 ```
 
 Output to a terminal is colored; set `NO_COLOR=1` to disable.
@@ -57,6 +58,7 @@ session, as in the original.
 | Other     | `←` assignment, `A[I;J]` indexing and indexed assignment, `⎕` input/output, `⍞` character input/output, `→` branch, labels |
 | System    | `⎕IO` index origin, `⎕CT` comparison tolerance, `⎕PP` print precision, `⎕PW` print width, `⎕RL` random link; localizable in headers |
 | Nested    | strands `1 (2 3) 'AB'`, `⊂` enclose, `⊃` disclose and pick, `≡` depth and match, `∊` enlist, `f¨` each, strand assignment `(A B)←X`, selective assignment `(2↑V)←X`; scalar functions are pervasive |
+| Workspace | `)FNS )VARS )ERASE )WSID )SAVE )LOAD )COPY )CLEAR )OFF`; saved workspaces are APL source; `⎕LX` latent expression |
 | Functions | `∇` definitions: niladic, monadic, dyadic, with or without explicit result |
 
 Data are arrays of any rank of numbers (floating point) and characters (`'IT''S'`); `=` and `≠` compare characters. Errors are reported by
@@ -115,7 +117,7 @@ R←R×I
 `make test` runs unit tests and golden tests. Each `testdata/*.apl` script
 covers one area of the language (lexical rules, monadic and dyadic
 functions, reduction, structural functions, products, indexing, syntax,
-user functions, `⎕`, output format, edge cases, system variables, characters, more scalar functions, axis, rearranging functions, format and execute, nested arrays, functions and operators, suspension), with `⍝` comments saying
+user functions, `⎕`, output format, edge cases, system variables, characters, more scalar functions, axis, rearranging functions, format and execute, nested arrays, functions and operators, suspension, workspaces), with `⍝` comments saying
 what each group checks. It is run as an interactive session, and the
 transcript (input after the prompt, then output) is compared with the
 matching `.out` file.

@@ -238,7 +238,7 @@ func (in *Interp) call(f *Function, left, right *Array) (*Array, error) {
 		for n, v := range saved {
 			switch {
 			case isSysName(n):
-				in.env.set(n, v)
+				in.setVar(n, v)
 			case v == nil:
 				delete(in.vars, n)
 			default:

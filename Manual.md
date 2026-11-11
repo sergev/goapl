@@ -18,6 +18,7 @@ describes the language as goapl implements it.
 goapl                 interactive session on the terminal
 goapl < file.apl      read statements from standard input
 goapl a.apl b.apl     run script files in one workspace
+goapl -i ws.apl       run a file, then continue with a session
 ```
 
 In a session, goapl shows a prompt of six spaces, reads a line, runs it,
@@ -30,7 +31,7 @@ sessions: indented lines are typed, the others are printed.
 ```
 
 A line starting with `/*` ends the session (or the current script file).
-End of input ends it too.
+End of input or `)OFF` ends it too.
 
 When the output goes to a terminal, goapl uses colors: results in green,
 error messages in red. Set the environment variable `NO_COLOR` to turn
@@ -1417,6 +1418,7 @@ a value.
 | `⎕LC` | line numbers of running functions | | read only |
 | `⎕EM` | message of the last error | | read only |
 | `⎕ET` | type of the last error | 0 0 | read only |
+| `⎕LX` | latent expression, run after loading | `''` | string |
 
 A value outside the allowed range is a `DOMAIN ERROR`; an unknown `⎕`
 name is a `SYNTAX ERROR`.
@@ -1910,6 +1912,95 @@ executes A instead. Errors inside B do not suspend.
 0
 ```
 
+# Workspaces
+
+The variables, functions and system variables of a session form its
+*workspace*. System commands, lines starting with `)`, manage it. A
+command that cannot be done prints a message, not an error.
+
+| Command | Effect |
+|:--|:--|
+| `)FNS [A]` | list functions and operators, from name A on |
+| `)VARS [A]` | list variables, from name A on |
+| `)ERASE A B …` | erase names |
+| `)WSID [A]` | show the workspace name, or set it to A |
+| `)SAVE [A]` | save the workspace to file A.apl, by default its name |
+| `)LOAD A` | replace the workspace by the one saved in A.apl |
+| `)COPY A [B …]` | copy all, or the named, objects of saved workspace A |
+| `)CLEAR` | start a clear workspace |
+| `)SI` | show the state indicator |
+| `)RESET` | clear the state indicator |
+| `)OFF` | end the session |
+
+```apl
+      X←1 2 3
+      ∇R←SQ Y
+[1] R←Y×Y
+[2] ∇
+      )VARS
+X
+      )FNS
+SQ
+      )WSID
+CLEAR WS
+      )SAVE DEMO
+SAVED DEMO
+      )CLEAR
+CLEAR WS
+      )VARS
+      )LOAD DEMO
+LOADED DEMO
+      SQ X
+1 4 9
+      )COPY NOSUCH
+WS NOT FOUND
+```
+
+A clear workspace cannot be saved without a name, and a workspace with
+suspended functions cannot be saved. `)CLEAR` and `)LOAD` also clear the
+state indicator.
+
+## Workspace files
+
+A saved workspace is APL source that recreates it: system variables and
+variables as assignments of expressions for their exact values, and
+functions in `∇` form. It can be read and edited, and run as a script.
+
+```text
+⍝ goapl workspace
+⎕IO←1
+⎕CT←1E¯13
+⎕PP←10
+⎕PW←80
+⎕RL←16807
+⎕LX←''
+X←1 2 3
+∇R←SQ Y
+R←Y×Y
+∇
+```
+
+## Latent expression `⎕LX`
+
+`⎕LX` is a string run after the workspace is loaded, by `)LOAD` or from
+the command line.
+
+```apl
+      ⎕LX←'''HELLO'''
+      )SAVE GREET
+SAVED GREET
+      )LOAD GREET
+LOADED GREET
+HELLO
+```
+
+## Command line
+
+`goapl file …` runs the files in one workspace, then `⎕LX` if set, and
+ends. `goapl -i file …` continues with a session afterwards, so
+`goapl -i DEMO.apl` loads a saved workspace and works in it. `)OFF` in a
+file ends the program.
+
 # Errors
 
 An error prints the error class, the line, and a caret `^` under the
@@ -1960,6 +2051,7 @@ goapl adds to the language of the Pascal original:
 - `⋄`, function editing, `⎕FX ⎕CR ⎕NC ⎕EX`, any function as an operand,
   ambivalent functions, defined operators.
 - Suspension on error, `)SI`, `)RESET`, `⎕LC`, `⎕EA ⎕EM ⎕ET`, Ctrl-C.
+- System commands and workspaces saved as APL source; `⎕LX`.
 
 goapl follows APL2 where the original differs:
 

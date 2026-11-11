@@ -119,9 +119,7 @@ FAILED
 ¯1
       ⍝ Errors
       )FOO
-SYNTAX ERROR
-)FOO
-^
+INCORRECT COMMAND
       ⎕LC←1
 SYNTAX ERROR
 ⎕LC←1

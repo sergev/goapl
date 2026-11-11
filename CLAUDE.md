@@ -80,6 +80,11 @@ Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
   `)RESET` and end of input unwind with the sentinel errors `errEscape`/
   `errUnwind`, `errReset` and `errQuit`, never reported. `Exec` (used
   by unit tests without `Run`) never suspends.
+- **Workspaces** (`commands.go`): system commands; `)SAVE` writes APL
+  source (`literal` gives an exact expression for any value), `)LOAD`
+  and `)COPY` run a file in a fresh `Interp` and take its objects.
+  Commands that change the workspace while functions are suspended
+  unwind with `errReset` and run in `Interp.atTop` at level 0.
 - **User functions**: `Interp.call` implements dynamic scoping by saving
   and restoring globals for args, result, `;locals` and labels; labels are
   local constants equal to their line number; `→` returns a target from
@@ -94,7 +99,8 @@ Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
 
 - `apl/*_test.go`: unit tests, mostly checking error classes.
 - `testdata/NN-*.apl` + `.out`: golden session transcripts per feature
-  area, run with `Prompt` and `Echo` set (`golden_test.go`). `⍝` comments
+  area, run with `Prompt` and `Echo` set in an empty temporary directory
+  (`golden_test.go`). `⍝` comments
   label each group.
 - `apl/parity_test.go`: every case from the original's test suite;
   deliberate differences are marked `differs_*`.

@@ -29,7 +29,7 @@ func defaultEnv() env {
 
 // sysVars lists the system variables.
 var sysVars = map[string]bool{"⎕IO": true, "⎕CT": true, "⎕PP": true, "⎕PW": true, "⎕RL": true,
-	"⎕LC": true, "⎕EM": true, "⎕ET": true}
+	"⎕LC": true, "⎕EM": true, "⎕ET": true, "⎕LX": true}
 
 // readOnly system variables describe the interpreter's state.
 var readOnly = map[string]bool{"⎕LC": true, "⎕EM": true, "⎕ET": true}

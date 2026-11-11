@@ -11,11 +11,17 @@ import (
 
 var update = flag.Bool("update", false, "rewrite testdata/*.out")
 
-// TestGolden runs testdata/*.apl and compares output with *.out.
+// TestGolden runs testdata/*.apl and compares output with *.out. Each
+// script runs in an empty directory, for workspace files.
 func TestGolden(t *testing.T) {
 	files, err := filepath.Glob("../testdata/*.apl")
 	if err != nil {
 		t.Fatal(err)
+	}
+	for i, f := range files {
+		if files[i], err = filepath.Abs(f); err != nil {
+			t.Fatal(err)
+		}
 	}
 	for _, src := range files {
 		t.Run(filepath.Base(src), func(t *testing.T) {
@@ -24,6 +30,7 @@ func TestGolden(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer f.Close()
+			t.Chdir(t.TempDir())
 			var out bytes.Buffer
 			in := New(&out)
 			in.Prompt = "      "

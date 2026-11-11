@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strings"
 
 	"github.com/sergev/goapl/apl"
 )
@@ -21,27 +22,23 @@ func isTerminal(f *os.File) bool {
 	return err == nil && fi.Mode()&os.ModeCharDevice != 0
 }
 
+const usage = "usage: goapl [-i] [file.apl ...]"
+
 // run executes script files, or stdin if none; returns the exit status.
+// After the files, ⎕LX runs if set; -i then continues with a session.
 // tty enables the prompt and Ctrl-C to interrupt, color the ANSI colors.
 func run(args []string, stdin io.Reader, stdout, stderr io.Writer, tty, color bool) int {
 	in := apl.New(stdout)
 	in.Color = color
-	if len(args) == 0 {
-		if tty {
-			in.Prompt = "      "
-			intr := make(chan os.Signal, 1)
-			signal.Notify(intr, os.Interrupt)
-			defer signal.Stop(intr)
-			go func() {
-				for range intr {
-					in.Interrupt()
-				}
-			}()
-		}
-		in.Run(stdin)
-		return 0
+	session := len(args) == 0
+	if len(args) > 0 && args[0] == "-i" {
+		session, args = true, args[1:]
 	}
 	for _, name := range args {
+		if strings.HasPrefix(name, "-") {
+			fmt.Fprintln(stderr, usage)
+			return 2
+		}
 		f, err := os.Open(name)
 		if err != nil {
 			fmt.Fprintln(stderr, err)
@@ -49,6 +46,27 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer, tty, color bo
 		}
 		in.Run(f)
 		f.Close()
+		if in.Off() {
+			return 0
+		}
 	}
+	if len(args) > 0 {
+		in.RunLatent()
+	}
+	if !session {
+		return 0
+	}
+	if tty {
+		in.Prompt = "      "
+		intr := make(chan os.Signal, 1)
+		signal.Notify(intr, os.Interrupt)
+		defer signal.Stop(intr)
+		go func() {
+			for range intr {
+				in.Interrupt()
+			}
+		}()
+	}
+	in.Run(stdin)
 	return 0
 }

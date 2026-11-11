@@ -71,6 +71,9 @@ func (in *Interp) repl(level int) (int, error) {
 			return 0, err
 		case err == errEscape && level > 0:
 			return 0, err
+		case err == errReset && in.atTop != nil:
+			in.atTop()
+			in.atTop = nil
 		case err == errEscape, err == errUnwind, err == errReset:
 		case err != nil:
 			in.report(err)
@@ -78,30 +81,6 @@ func (in *Interp) repl(level int) (int, error) {
 			return target, nil
 		}
 	}
-}
-
-// command runs a system command such as )SI.
-func (in *Interp) command(line string) error {
-	f := strings.Fields(line)
-	switch strings.ToUpper(f[0]) {
-	case ")SI":
-		for i := len(in.stack) - 1; i >= 0; i-- {
-			fr := in.stack[i]
-			s := fmt.Sprintf("%s[%d]", fr.f.Name, fr.pc)
-			if fr.suspended {
-				s += " *"
-			}
-			in.endLine()
-			fmt.Fprintln(in.out, s)
-		}
-		return nil
-	case ")RESET":
-		if len(in.stack) > 0 {
-			return errReset
-		}
-		return nil
-	}
-	return errorAt(SyntaxError, 0)
 }
 
 // lineCounter is ⎕LC: the line numbers of the functions in the state

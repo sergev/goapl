@@ -3,6 +3,7 @@ package apl
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -51,6 +52,11 @@ func TestManual(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	path, err := filepath.Abs(manualPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(t.TempDir()) // for workspace files
 	lines := strings.Split(string(data), "\n")
 	var result []string
 	changed := false
@@ -76,7 +82,7 @@ func TestManual(t *testing.T) {
 		i = end - 1
 	}
 	if *update && changed {
-		if err := os.WriteFile(manualPath, []byte(strings.Join(result, "\n")), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(strings.Join(result, "\n")), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}

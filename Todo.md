@@ -12,14 +12,8 @@ arrays of any rank with general (character, mixed, nested) elements (T2);
 `○ ! ? ⍲ ⍱` (T5); scan, axis, N-wise reduction, expand (T6);
 `, ⍪ ⌽ ⊖ ⍉ ↑ ↓ ∊ ~ ⍋ ⍒ ⊥ ⊤ ⌹` (T7); `⍕ ⍎ ⎕PW` (T8); nested arrays (T9);
 `⋄`, function editing, `⎕FX ⎕CR ⎕NC ⎕EX`, functions as operands, defined
-operators (T10); suspension, `)SI )RESET ⎕LC ⎕EA ⎕EM ⎕ET`, Ctrl-C (T11).
-
-## T12. System commands and workspaces
-
-- `)OFF`, `)FNS`, `)VARS`, `)ERASE`, `)CLEAR`, `)WSID`.
-- `)SAVE`, `)LOAD`, `)COPY` with a readable text format (APL source
-  that recreates the workspace).
-- Run a workspace or script from the command line.
+operators (T10); suspension, `)SI )RESET ⎕LC ⎕EA ⎕EM ⎕ET`, Ctrl-C (T11);
+system commands and workspaces, `⎕LX`, `goapl -i` (T12).
 
 ## T13. Input
 
