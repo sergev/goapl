@@ -10,16 +10,21 @@ import (
 )
 
 func main() {
-	tty := false
-	if fi, err := os.Stdin.Stat(); err == nil && fi.Mode()&os.ModeCharDevice != 0 {
-		tty = true
-	}
-	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr, tty))
+	tty := isTerminal(os.Stdin)
+	color := isTerminal(os.Stdout) && os.Getenv("NO_COLOR") == ""
+	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr, tty, color))
+}
+
+func isTerminal(f *os.File) bool {
+	fi, err := f.Stat()
+	return err == nil && fi.Mode()&os.ModeCharDevice != 0
 }
 
 // run executes script files, or stdin if none; returns the exit status.
-func run(args []string, stdin io.Reader, stdout, stderr io.Writer, tty bool) int {
+// tty enables the prompt, color the ANSI colors.
+func run(args []string, stdin io.Reader, stdout, stderr io.Writer, tty, color bool) int {
 	in := apl.New(stdout)
+	in.Color = color
 	if len(args) == 0 {
 		if tty {
 			in.Prompt = "      "

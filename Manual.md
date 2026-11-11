@@ -31,6 +31,10 @@ sessions: indented lines are typed, the others are printed.
 A line starting with `/*` ends the session (or the current script file).
 End of input ends it too.
 
+When the output goes to a terminal, goapl uses colors: results in green,
+error messages in red. Set the environment variable `NO_COLOR` to turn
+colors off.
+
 # Characters and tokens
 
 Input is UTF-8 text with APL glyphs. Spaces separate tokens; they are

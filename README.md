@@ -31,6 +31,8 @@ goapl                 # interactive, reads statements from stdin
 goapl file.apl ...    # run script files
 ```
 
+Output to a terminal is colored; set `NO_COLOR=1` to disable.
+
 Input is UTF-8 with standard APL glyphs. A line starting with `/*` ends the
 session, as in the original.
 

@@ -18,6 +18,7 @@ type Interp struct {
 	input    *bufio.Scanner // source of ⎕ input
 	Prompt   string         // printed before each input line
 	Echo     bool           // copy input lines to output, for transcripts
+	Color    bool           // use ANSI colors in output
 }
 
 // New returns an interpreter writing to out.
@@ -61,7 +62,7 @@ func withSrc(err error, src string) error {
 }
 
 func (in *Interp) print(v *Array) error {
-	_, err := fmt.Fprintln(in.out, Format(v))
+	_, err := fmt.Fprintln(in.out, in.paint(styleResult, Format(v)))
 	return err
 }
 
@@ -89,7 +90,13 @@ func (in *Interp) Run(r io.Reader) {
 	}
 }
 
-func (in *Interp) prompt() { fmt.Fprint(in.out, in.promptText()) }
+func (in *Interp) prompt() {
+	p := in.promptText()
+	if in.defining != nil {
+		p = in.paint(stylePrompt, p)
+	}
+	fmt.Fprint(in.out, p)
+}
 
 // promptText is the prompt, or "[n] " while defining a function.
 func (in *Interp) promptText() string {
@@ -102,7 +109,7 @@ func (in *Interp) promptText() string {
 // quadInput reads and evaluates a line for ⎕, prompting again on error.
 func (in *Interp) quadInput() (*Array, error) {
 	for {
-		fmt.Fprintln(in.out, "⎕:")
+		fmt.Fprintln(in.out, in.paint(stylePrompt, "⎕:"))
 		if in.input == nil || !in.input.Scan() {
 			return nil, newError(18)
 		}
@@ -132,7 +139,7 @@ func (in *Interp) quadInput() (*Array, error) {
 
 // report prints an error message, then the line with a caret, like SError.
 func (in *Interp) report(err error) {
-	fmt.Fprintln(in.out, err)
+	fmt.Fprintln(in.out, in.paint(styleError, err.Error()))
 	e, ok := err.(*Error)
 	if !ok || e.Src == "" {
 		return
@@ -141,8 +148,8 @@ func (in *Interp) report(err error) {
 	if e.Where != "" {
 		prefix = e.Where + " "
 	}
-	fmt.Fprintln(in.out, prefix+e.Src)
+	fmt.Fprintln(in.out, in.paint(styleWhere, prefix)+e.Src)
 	if e.Pos != NoPos {
-		fmt.Fprintln(in.out, strings.Repeat(" ", len([]rune(prefix))+e.Pos)+"↑")
+		fmt.Fprintln(in.out, strings.Repeat(" ", len([]rune(prefix))+e.Pos)+in.paint(styleCaret, "↑"))
 	}
 }

@@ -371,3 +371,19 @@ func TestCompress(t *testing.T) {
 		}
 	}
 }
+
+func TestColorOutput(t *testing.T) {
+	var out bytes.Buffer
+	in := New(&out)
+	in.Color = true
+	in.Prompt = "      "
+	in.Run(strings.NewReader("∇R←F X\nR←X÷0\n∇\nF 1\nX←⎕\n2\n"))
+	want := "      \x1b[2m[1] \x1b[0m\x1b[2m[2] \x1b[0m      " +
+		"\x1b[1;31mAttempted division by zero\x1b[0m\n" +
+		"\x1b[33mF[1] \x1b[0mR←X÷0\n" +
+		"        \x1b[31m↑\x1b[0m\n" +
+		"      \x1b[2m⎕:\x1b[0m\n      "
+	if out.String() != want {
+		t.Errorf("got %q\nwant %q", out.String(), want)
+	}
+}
