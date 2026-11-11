@@ -28,6 +28,10 @@ goapl itself.
 
 All of the interpreter is package `apl`; `cmd/goapl` is a thin CLI
 (prompt when stdin is a tty, color when stdout is a tty and `NO_COLOR` unset).
+`internal/lineedit` is the terminal line editor (raw mode via
+`golang.org/x/term`, history, APL keyboard); the CLI plugs it in through
+`Interp.ReadLine` when stdin and stdout are terminals. Input lines other
+than `⍞` go through `Transliterate` (`#rho` → `⍴`, `translit.go`).
 
 Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
 `Lex` (`lexer.go`) → `Interp.parse` (`parser.go`) → `Interp.run`/`eval`

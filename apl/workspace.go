@@ -31,6 +31,10 @@ type Interp struct {
 	Echo        bool           // copy input lines to output, for transcripts
 	Color       bool           // use ANSI colors in output
 	pending     bool           // ⍞ output left a line unfinished
+	partial     string         // the unfinished line
+	// ReadLine, if set, reads input lines in place of the reader given
+	// to Run, showing the prompt; an error ends the input.
+	ReadLine func(prompt string) (string, error)
 }
 
 // New returns an interpreter writing to out.
@@ -98,8 +102,34 @@ func (in *Interp) print(v *Array) error {
 func (in *Interp) endLine() {
 	if in.pending {
 		fmt.Fprintln(in.out)
-		in.pending = false
+		in.pending, in.partial = false, ""
 	}
+}
+
+// readLine reads an input line after prompt, shown in style: with
+// ReadLine if set, else from the input of Run, showing the prompt (or
+// echoing it with the line). It reports false at end of input.
+func (in *Interp) readLine(prompt, style string) (string, bool) {
+	in.endLine()
+	shown := prompt
+	if style != "" {
+		shown = in.paint(style, prompt)
+	}
+	if in.ReadLine != nil {
+		line, err := in.ReadLine(shown)
+		return line, err == nil
+	}
+	if !in.Echo {
+		fmt.Fprint(in.out, shown)
+	}
+	if in.input == nil || !in.input.Scan() {
+		return "", false
+	}
+	line := in.input.Text()
+	if in.Echo {
+		fmt.Fprintln(in.out, strings.TrimRight(prompt+line, " "))
+	}
+	return line, true
 }
 
 // quoteOutput is ⍞←X: prints X without ending the line.
@@ -108,15 +138,27 @@ func (in *Interp) quoteOutput(v *Array) error {
 	if s == "" {
 		return nil
 	}
-	in.endLine()
 	_, err := fmt.Fprint(in.out, in.paint(styleResult, s))
 	in.pending = true
+	if i := strings.LastIndexByte(s, '\n'); i >= 0 {
+		in.partial = s[i+1:]
+	} else {
+		in.partial += s
+	}
 	return err
 }
 
 // quoteInput is ⍞: reads a line as a character vector. Any ⍞ output
 // on the same line serves as the prompt.
 func (in *Interp) quoteInput() (*Array, error) {
+	if in.ReadLine != nil {
+		line, err := in.ReadLine(in.partial) // redraws the prompt
+		in.pending, in.partial = false, ""
+		if err != nil {
+			return nil, newError(Interrupt)
+		}
+		return Chars(line), nil
+	}
 	if in.input == nil || !in.input.Scan() {
 		in.endLine()
 		return nil, newError(Interrupt)
@@ -178,15 +220,6 @@ func (in *Interp) Run(r io.Reader) {
 	in.input = nil
 }
 
-func (in *Interp) prompt() {
-	in.endLine()
-	p := in.promptText()
-	if in.editing != nil {
-		p = in.paint(stylePrompt, p)
-	}
-	fmt.Fprint(in.out, p)
-}
-
 // promptText is the prompt, or "[n] " while defining a function.
 func (in *Interp) promptText() string {
 	if in.Prompt != "" && in.editing != nil {
@@ -200,13 +233,11 @@ func (in *Interp) quadInput() (*Array, error) {
 	for {
 		in.endLine()
 		fmt.Fprintln(in.out, in.paint(stylePrompt, "⎕:"))
-		if in.input == nil || !in.input.Scan() {
+		line, ok := in.readLine(in.Prompt, "")
+		if !ok {
 			return nil, newError(Interrupt)
 		}
-		line := in.input.Text()
-		if in.Echo {
-			fmt.Fprintln(in.out, strings.TrimRight(in.Prompt+line, " "))
-		}
+		line = Transliterate(line)
 		toks, err := Lex(line)
 		if err == nil && len(toks) == 0 {
 			continue

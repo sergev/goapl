@@ -6,9 +6,11 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 
 	"github.com/sergev/goapl/apl"
+	"github.com/sergev/goapl/internal/lineedit"
 )
 
 func main() {
@@ -58,6 +60,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer, tty, color bo
 	}
 	if tty {
 		in.Prompt = "      "
+		useEditor(in, stdin, stdout)
 		intr := make(chan os.Signal, 1)
 		signal.Notify(intr, os.Interrupt)
 		defer signal.Stop(intr)
@@ -69,4 +72,26 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer, tty, color bo
 	}
 	in.Run(stdin)
 	return 0
+}
+
+// useEditor reads lines with the line editor when both stdin and stdout
+// are terminals; history is kept in ~/.goapl_history.
+func useEditor(in *apl.Interp, stdin io.Reader, stdout io.Writer) {
+	fin, ok1 := stdin.(*os.File)
+	fout, ok2 := stdout.(*os.File)
+	if !ok1 || !ok2 || !isTerminal(fin) || !isTerminal(fout) {
+		return
+	}
+	file := ""
+	if home, err := os.UserHomeDir(); err == nil {
+		file = filepath.Join(home, ".goapl_history")
+	}
+	ed := lineedit.New(fin, fout, file)
+	in.ReadLine = func(prompt string) (string, error) {
+		line, err := ed.ReadLine(prompt)
+		if err == lineedit.ErrInterrupt {
+			return "", nil
+		}
+		return line, err
+	}
 }

@@ -37,6 +37,100 @@ When the output goes to a terminal, goapl uses colors: results in green,
 error messages in red. Set the environment variable `NO_COLOR` to turn
 colors off.
 
+## Typing APL
+
+On a terminal, goapl edits the input line:
+
+| Key | Effect |
+|:--|:--|
+| Left, Right, Ctrl-B, Ctrl-F | move the cursor |
+| Home, End, Ctrl-A, Ctrl-E | go to the start or end of the line |
+| Backspace, Delete, Ctrl-D | delete a character |
+| Ctrl-K, Ctrl-U | delete to the end or the start of the line |
+| Up, Down, Ctrl-P, Ctrl-N | recall earlier lines |
+| Ctrl-C | abandon the line |
+| Ctrl-D on an empty line | end the session |
+
+Lines are kept in `~/.goapl_history` for later sessions. Ctrl-C while a
+function runs interrupts it.
+
+APL glyphs are typed with a prefix: the backquote `` ` `` and then a
+key, or the key with Alt. The keyboard follows the common APL layout:
+
+| Key | Key | Key | Key | Key | Key |
+|:--|:--|:--|:--|:--|:--|
+| `a` ⍺ | `b` ⊥ | `c` ∩ | `d` ⌊ | `e` ∊ | `f` _ |
+| `g` ∇ | `h` ∆ | `i` ⍳ | `j` ∘ | `k` `'` | `L` ⍞ |
+| `l` ⎕ | `m` \| | `n` ⊤ | `o` ○ | `p` * | `q` ? |
+| `r` ⍴ | `s` ⌈ | `t` ~ | `u` ↓ | `v` ∪ | `w` ⍵ |
+| `x` ⊃ | `y` ↑ | `z` ⊂ | `#` ⍒ | `$` ⍋ | `%` ⌽ |
+| `&` ⊖ | `'` ⍕ | `(` ⍱ | `)` ⍲ | `*` ⍟ | `+` ⌹ |
+| `,` ⍝ | `-` × | `.` ⍀ | `/` ⌿ | `0` ∧ | `1` ¨ |
+| `2` ¯ | `3` < | `4` ≤ | `5` = | `6` ≥ | `7` > |
+| `8` ≠ | `9` ∨ | `:` ≡ | `;` ⍎ | `<` ⍪ | `=` ÷ |
+| `[` ← | `]` → | `^` ⍉ | `` ` `` ⋄ |  |  |
+
+Without an APL keyboard, glyphs can also be written by name: `#rho`
+stands for `⍴`. Names work in any input except `⍞`, but not inside
+strings or comments; `#comment` starts a comment. Case does not matter,
+and the longest known name is taken, so `#iota5` is `⍳5`.
+
+```apl
+      2 3#rho#iota6
+1 2 3
+4 5 6
+      +/#iota10
+55
+```
+
+| Glyph | Names |
+|:--|:--|
+| × | `#times` |
+| ÷ | `#div` `#divide` |
+| ⍴ | `#rho` |
+| ⍳ | `#iota` |
+| ⌈ | `#max` `#ceil` |
+| ⌊ | `#min` `#floor` |
+| ⍟ | `#log` |
+| ○ | `#circle` |
+| ≤ | `#le` |
+| ≥ | `#ge` |
+| ≠ | `#ne` |
+| ∧ | `#and` |
+| ∨ | `#or` |
+| ⍲ | `#nand` |
+| ⍱ | `#nor` |
+| ↑ | `#take` |
+| ↓ | `#drop` |
+| ⊂ | `#enclose` |
+| ⊃ | `#disclose` `#pick` |
+| ∊ | `#epsilon` `#in` |
+| ⌽ | `#rotate` `#reverse` |
+| ⊖ | `#flip` |
+| ⍉ | `#transpose` |
+| ⍋ | `#gradeup` |
+| ⍒ | `#gradedown` |
+| ⊥ | `#decode` |
+| ⊤ | `#encode` |
+| ⌹ | `#domino` |
+| ⍕ | `#format` |
+| ⍎ | `#execute` |
+| ≡ | `#match` `#depth` |
+| ¨ | `#each` |
+| ∘ | `#jot` |
+| ⌿ | `#slashbar` |
+| ⍀ | `#backslashbar` |
+| ⍪ | `#commabar` |
+| ⎕ | `#quad` |
+| ⍞ | `#quotequad` |
+| ← | `#assign` `#gets` |
+| → | `#goto` `#branch` |
+| ∇ | `#del` |
+| ∆ | `#delta` |
+| ⍝ | `#comment` `#lamp` |
+| ⋄ | `#diamond` |
+| ¯ | `#neg` `#macron` |
+
 # Characters and tokens
 
 Input is UTF-8 text with APL glyphs. Spaces separate tokens; they are
@@ -2052,6 +2146,7 @@ goapl adds to the language of the Pascal original:
   ambivalent functions, defined operators.
 - Suspension on error, `)SI`, `)RESET`, `⎕LC`, `⎕EA ⎕EM ⎕ET`, Ctrl-C.
 - System commands and workspaces saved as APL source; `⎕LX`.
+- Line editing with history and an APL keyboard; ASCII glyph names.
 
 goapl follows APL2 where the original differs:
 

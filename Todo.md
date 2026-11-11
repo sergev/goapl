@@ -13,10 +13,7 @@ arrays of any rank with general (character, mixed, nested) elements (T2);
 `, ⍪ ⌽ ⊖ ⍉ ↑ ↓ ∊ ~ ⍋ ⍒ ⊥ ⊤ ⌹` (T7); `⍕ ⍎ ⎕PW` (T8); nested arrays (T9);
 `⋄`, function editing, `⎕FX ⎕CR ⎕NC ⎕EX`, functions as operands, defined
 operators (T10); suspension, `)SI )RESET ⎕LC ⎕EA ⎕EM ⎕ET`, Ctrl-C (T11);
-system commands and workspaces, `⎕LX`, `goapl -i` (T12).
+system commands and workspaces, `⎕LX`, `goapl -i` (T12); ASCII glyph
+names, line editing with history and an APL keyboard (T13).
 
-## T13. Input
-
-- ASCII transliteration of glyphs (e.g. `#rho`), for terminals without
-  an APL keyboard.
-- Line editing and history in the REPL, with an APL keyboard map.
+All tasks are done.

@@ -10,7 +10,8 @@ grows toward APL2; where the two differ, goapl follows APL2.
 
 ## Build
 
-Requires Go 1.27 or later.
+Requires Go 1.27 or later. The only dependency is `golang.org/x/term`,
+for the line editor.
 
 ```sh
 make            # build ./goapl
@@ -34,8 +35,11 @@ goapl -i ws.apl       # run a file (e.g. a saved workspace), then a session
 
 Output to a terminal is colored; set `NO_COLOR=1` to disable.
 
-Input is UTF-8 with standard APL glyphs. A line starting with `/*` ends the
-session, as in the original.
+Input is UTF-8 with standard APL glyphs. On a terminal the input line can
+be edited, with history (kept in `~/.goapl_history`); glyphs are typed
+with the prefix key `` ` `` or with Alt (`` `r `` gives `⍴`). Without an APL
+keyboard, glyphs can be written by name: `2 3#rho#iota6`. A line starting
+with `/*` ends the session, as in the original.
 
 ```apl
       +/⍳10
@@ -117,7 +121,7 @@ R←R×I
 `make test` runs unit tests and golden tests. Each `testdata/*.apl` script
 covers one area of the language (lexical rules, monadic and dyadic
 functions, reduction, structural functions, products, indexing, syntax,
-user functions, `⎕`, output format, edge cases, system variables, characters, more scalar functions, axis, rearranging functions, format and execute, nested arrays, functions and operators, suspension, workspaces), with `⍝` comments saying
+user functions, `⎕`, output format, edge cases, system variables, characters, more scalar functions, axis, rearranging functions, format and execute, nested arrays, functions and operators, suspension, workspaces, ASCII glyph names), with `⍝` comments saying
 what each group checks. It is run as an interactive session, and the
 transcript (input after the prompt, then output) is compared with the
 matching `.out` file.

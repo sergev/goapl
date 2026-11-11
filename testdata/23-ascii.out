@@ -1,0 +1,61 @@
+      ⍝ ASCII names of glyphs: #name stands for the glyph
+      2 3#rho#iota6
+1 2 3
+4 5 6
+      +/#iota10
+55
+      #rotate'ABC'
+CBA
+      5#max3
+5
+      1 2 3#in2
+0 1 0
+      X#gets4
+      X
+4
+      ⍝ The longest known name is taken, so a digit or a name may follow
+      #iota5
+1 2 3 4 5
+      #rhoX
+
+      #rho#rho2 3#rho0
+2
+      ⍝ Case does not matter
+      #IOTA3
+1 2 3
+      ⍝ Not inside strings or comments; #comment starts a comment
+      '#rho'
+#rho
+      1+1 ⍝ #rho
+2
+      1+1 #comment #rho
+2
+      ⍝ Functions can be typed in ASCII too
+      #del R#getsSQ Y
+[1] R#getsY#timesY
+[2] #del
+      SQ 4
+16
+      ⎕CR 'SQ'
+R←SQ Y
+R←Y×Y 
+      ⍝ ⎕ input is transliterated; ⍞ input is not
+      Z←⎕
+⎕:
+      #iota3
+      Z
+1 2 3
+      Z←⍞
+#rho
+      Z
+#rho
+      ⍝ ⍞ output continues the line until a new line is needed
+      ⍞←'A' ⋄ ⍞←'B' ⋄ ⍞←'C'
+ABC
+      'NEXT'
+NEXT
+      ⍝ An unknown name is a syntax error
+      #nosuch
+SYNTAX ERROR
+#nosuch
+^

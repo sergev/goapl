@@ -408,7 +408,7 @@ func TestColorOutput(t *testing.T) {
 		"\x1b[1;31mDOMAIN ERROR\x1b[0m\n" +
 		"\x1b[33mF[1] \x1b[0mR←X÷0\n" +
 		"        \x1b[31m^\x1b[0m\n" +
-		"      \x1b[2m⎕:\x1b[0m\n      "
+		"      \x1b[2m⎕:\x1b[0m\n            "
 	if out.String() != want {
 		t.Errorf("got %q\nwant %q", out.String(), want)
 	}

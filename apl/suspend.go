@@ -2,7 +2,6 @@ package apl
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 )
 
@@ -48,24 +47,21 @@ func (in *Interp) suspend(err error) (int, error) {
 // runs while a function is suspended and returns the target of a branch.
 func (in *Interp) repl(level int) (int, error) {
 	for {
-		if !in.Echo {
-			in.prompt()
+		style := ""
+		if in.editing != nil {
+			style = stylePrompt
 		}
-		if !in.input.Scan() {
+		line, ok := in.readLine(in.promptText(), style)
+		if !ok {
 			in.endLine()
 			return 0, errQuit
 		}
 		in.interrupted.Store(false) // Ctrl-C at the prompt
-		line := in.input.Text()
-		if in.Echo {
-			in.endLine()
-			fmt.Fprintln(in.out, strings.TrimRight(in.promptText()+line, " "))
-		}
 		if in.editing == nil && strings.HasPrefix(strings.TrimSpace(line), "/*") {
 			in.endLine()
 			return 0, errQuit
 		}
-		target, err := in.execLine(line)
+		target, err := in.execLine(Transliterate(line))
 		switch {
 		case err == errQuit, err == errReset && level > 0:
 			return 0, err
