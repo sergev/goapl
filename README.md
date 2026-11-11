@@ -18,7 +18,11 @@ make test       # go vet + unit and golden tests
 make install    # install to ~/.local/bin (override with PREFIX=...)
 make clean
 make compare PROTO=/path/to/pascal-apl   # compare with the Pascal original
+make pdf        # Manual.pdf from Manual.md (needs pandoc and typst)
 ```
+
+The language is described in [Manual.md](Manual.md). Its examples are
+session transcripts checked by `make test`.
 
 ## Usage
 

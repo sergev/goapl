@@ -9,7 +9,7 @@ install: all
 	install -m 755 $(BIN) $(DESTDIR)$(PREFIX)/bin/
 
 clean:
-	rm -rf $(BIN) build
+	rm -rf $(BIN) build Manual.pdf
 	go clean
 
 test:
@@ -21,4 +21,10 @@ compare: all
 	@test -n "$(PROTO)" || { echo "usage: make compare PROTO=/path/to/pascal-apl"; exit 1; }
 	python3 tools/compare.py $(PROTO) ./$(BIN) tools/compare_cases.txt
 
-.PHONY: all install clean test compare
+pdf: Manual.pdf
+
+Manual.pdf: Manual.md tools/manual.typ
+	pandoc Manual.md -o Manual.pdf --pdf-engine=typst -H tools/manual.typ \
+		-V mainfont="DejaVu Serif" -V codefont="DejaVu Sans Mono"
+
+.PHONY: all install clean test compare pdf
