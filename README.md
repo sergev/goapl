@@ -46,7 +46,7 @@ session, as in the original.
 | Monadic   | `+` identity, `-` negate, `×` signum, `÷` reciprocal, `*` exp, `~` not, `⍳` index generator, `⍴` shape, `,` ravel |
 | Dyadic    | `+ - × ÷ *`, `⍳` index of, `⍴` reshape, `,` catenate, `= ≠ < ≤ ≥ >`, `∧ ∨` |
 | Operators | `f/` reduction (also `⌈ ⌊ ○`; `○/` is log to base, as in the original), `f.g` inner product, `∘.f` outer product |
-| Added     | `⌈ ⌊` ceiling/floor, max/min; `\|` magnitude/residue; `⍟` natural log, log to base |
+| Added     | `⌈ ⌊` ceiling/floor, max/min; `\|` magnitude/residue; `⍟` natural log, log to base; `A/B` compress |
 | Other     | `←` assignment, `A[I;J]` indexing and indexed assignment, `⎕` input/output, `→` branch, labels |
 | Functions | `∇` definitions: niladic, monadic, dyadic, with or without explicit result |
 
@@ -56,6 +56,33 @@ Indexing is more general than in the original: indices may be arrays
 (`V[2 4]`, `M[1 3;]`) and an axis may be elided (`M[;2]`); the original
 accepted scalar indices only. Output uses conventional APL notation (10 significant digits, `¯` for
 negative numbers) rather than the original fixed-width columns.
+
+## User functions
+
+```apl
+∇R←FACT N;I
+R←1
+I←0
+LOOP:→(I≥N)/0
+I←I+1
+R←R×I
+→LOOP
+∇
+```
+
+- The header is `∇[R←][A] F [B]` with optional local names `;X;Y`.
+  Arguments, result, locals and labels are local to the call (dynamic
+  scope); other names are global.
+- `→N` jumps to statement N; a target outside the function (e.g. `→0`)
+  returns. `→` of an empty vector does nothing, so `→(cond)/L` branches
+  conditionally. A label `L:` is a local constant equal to its line number.
+- The definition ends with a line `∇`, or with `∇` at the end of the last
+  statement. A function cannot be redefined (FUNCTION ALREADY DEFINED), as
+  in the original.
+- An error inside a function aborts to the top level and shows where:
+  `FACT[2] R←X÷0`.
+- `⎕←X` prints X. `⎕` prompts with `⎕:`, reads a line from the same input
+  and evaluates it as an expression.
 
 ## Roadmap
 
@@ -76,6 +103,5 @@ and review the diff.
 
 ## Status
 
-Step 3 done: scalar and structural functions, reduction, inner and
-outer product, indexing and indexed assignment. User-defined functions,
-branching and `⎕` come next.
+Step 4 done: the language of the original is implemented. Next: parity
+tests against the Pascal prototype.

@@ -2,6 +2,7 @@
 package apl
 
 // Messages holds the prototype error texts; index 0 is unused.
+// Codes 16 and 18 were unused in the original and are goapl additions.
 var Messages = [...]string{
 	0:   "",
 	1:   "INVALID CHARACTER FOLLOWS NEGATIVE SIGN",
@@ -19,9 +20,9 @@ var Messages = [...]string{
 	13:  "DYADIC OPERATOR NOT PRECEDED BY PRIMARY",
 	14:  "INVALID EXPRESSION WITHIN PARENTHESES",
 	15:  "MISMATCHED PARENTHESES",
-	16:  "NOT USED",
+	16:  "FUNCTION CALLS NESTED TOO DEEP",
 	17:  "LEFT ARG OF DYADIC FUNCT. NOT A PRIMARY",
-	18:  "NOT USED",
+	18:  "END OF INPUT",
 	19:  "VALUE NOT BOOLEAN",
 	20:  "ATTEMPTED DIVISION BY ZERO",
 	21:  "ARGUMENT NOT A SCALAR",
@@ -111,8 +112,10 @@ const NoPos = -1
 
 // Error is an APL error with a prototype message code.
 type Error struct {
-	Code int
-	Pos  int // rune offset in the line, or NoPos
+	Code  int
+	Pos   int    // rune offset in Src, or NoPos
+	Src   string // source line, if known
+	Where string // function and line number, e.g. "F[2]"
 }
 
 func (e *Error) Error() string { return Messages[e.Code] }

@@ -2,10 +2,12 @@ package apl
 
 // Grammar, read left to right but binding right to left:
 //
-//	expr    := fn expr | name ← expr | name [index] ← expr | operand [fn expr]
-//	operand := (number | name | ( expr )) {[index]}
+//	stmt    := → expr | expr
+//	expr    := fn expr | name ← expr | name [index] ← expr | ⎕ ← expr
+//	         | operand [fn expr]
+//	operand := (number | name | niladic | ⎕ | ( expr )) {[index]}
 //	index   := [expr] {; [expr]}
-//	fn      := prim | prim / | prim . prim | ∘ . prim
+//	fn      := prim | prim / | prim . prim | ∘ . prim | user function
 
 type node interface{ pos() int }
 
@@ -38,6 +40,23 @@ type indexAssignNode struct {
 	right node
 }
 
+type callNode struct { // niladic user function
+	fn *Function
+	at int
+}
+
+type quadInNode struct{ at int }
+
+type quadOutNode struct {
+	at    int
+	right node
+}
+
+type branchNode struct {
+	at    int
+	right node
+}
+
 type monadNode struct {
 	fn    *fnNode
 	right node
@@ -55,12 +74,14 @@ const (
 	fnReduce               // f/
 	fnInner                // f.g
 	fnOuter                // ∘.f
+	fnUser                 // user-defined function
 )
 
 type fnNode struct {
 	kind  fnKind
 	glyph string // f
 	g     string // g of inner product
+	user  *Function
 	at    int
 }
 
@@ -71,26 +92,37 @@ func (n *indexNode) pos() int  { return n.target.pos() }
 func (n *indexAssignNode) pos() int {
 	return n.at
 }
-func (n *monadNode) pos() int { return n.fn.at }
-func (n *dyadNode) pos() int  { return n.left.pos() }
+func (n *callNode) pos() int    { return n.at }
+func (n *quadInNode) pos() int  { return n.at }
+func (n *quadOutNode) pos() int { return n.at }
+func (n *branchNode) pos() int  { return n.at }
+func (n *monadNode) pos() int   { return n.fn.at }
+func (n *dyadNode) pos() int    { return n.left.pos() }
 
 type parser struct {
 	toks []Token
 	i    int
-	end  int // rune offset of end of line
+	end  int                  // rune offset of end of line
+	fns  map[string]*Function // user functions
 }
 
-// Parse parses one statement; returns nil for an empty line.
-func Parse(line string) (node, error) {
-	toks, err := Lex(line)
-	if err != nil {
-		return nil, err
-	}
+// parse parses one statement; returns nil if there are no tokens.
+func (in *Interp) parse(toks []Token, end int) (node, error) {
 	if len(toks) == 0 {
 		return nil, nil
 	}
-	p := &parser{toks: toks, end: len([]rune(line))}
-	n, err := p.expr()
+	p := &parser{toks: toks, end: end, fns: in.fns}
+	var n node
+	var err error
+	if t := toks[0]; isSpecial(t, "→") {
+		p.i++
+		var r node
+		if r, err = p.expr(); err == nil {
+			n = &branchNode{at: t.Pos, right: r}
+		}
+	} else {
+		n, err = p.expr()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -133,8 +165,19 @@ func (p *parser) atExprEnd() bool {
 	return !ok || isSpecial(t, ")") || isSpecial(t, "]") || isSpecial(t, ";")
 }
 
+// userFn returns the user function named by t, if any.
+func (p *parser) userFn(t Token) *Function {
+	if t.Kind != Name {
+		return nil
+	}
+	return p.fns[t.Text]
+}
+
 func (p *parser) atFn() bool {
 	t, ok := p.peek()
+	if f := p.userFn(t); f != nil {
+		return f.Arity() > 0
+	}
 	if ok && isSpecial(t, "∘") {
 		next, ok := p.peekAt(1)
 		return ok && isSpecial(next, ".")
@@ -152,19 +195,11 @@ func (p *parser) expr() (node, error) {
 	if p.atExprEnd() {
 		return nil, errorAt(10, p.here())
 	}
-	if p.atFn() {
-		f, err := p.fn()
-		if err != nil {
-			return nil, err
-		}
-		r, err := p.expr()
-		if err != nil {
-			return nil, err
-		}
-		return &monadNode{fn: f, right: r}, nil
-	}
 	t, _ := p.peek()
 	if next, ok := p.peekAt(1); ok && t.Kind == Name && isSpecial(next, "←") {
+		if p.userFn(t) != nil {
+			return nil, errorAt(8, t.Pos)
+		}
 		p.i += 2
 		r, err := p.expr()
 		if err != nil {
@@ -172,7 +207,32 @@ func (p *parser) expr() (node, error) {
 		}
 		return &assignNode{name: t.Text, at: t.Pos, right: r}, nil
 	}
-	if t.Kind == Name && p.indexAssignAhead() {
+	if p.atFn() {
+		f, err := p.fn()
+		if err != nil {
+			return nil, err
+		}
+		if f.kind == fnPrim && f.glyph == "/" {
+			return nil, errorAt(72, f.at)
+		}
+		if f.kind == fnUser && f.user.Arity() == 2 {
+			return nil, errorAt(74, f.at)
+		}
+		r, err := p.expr()
+		if err != nil {
+			return nil, err
+		}
+		return &monadNode{fn: f, right: r}, nil
+	}
+	if next, ok := p.peekAt(1); ok && isSpecial(t, "⎕") && isSpecial(next, "←") {
+		p.i += 2
+		r, err := p.expr()
+		if err != nil {
+			return nil, err
+		}
+		return &quadOutNode{at: t.Pos, right: r}, nil
+	}
+	if t.Kind == Name && p.userFn(t) == nil && p.indexAssignAhead() {
 		p.i += 2 // name [
 		idx, err := p.index()
 		if err != nil {
@@ -198,6 +258,9 @@ func (p *parser) expr() (node, error) {
 	f, err := p.fn()
 	if err != nil {
 		return nil, err
+	}
+	if f.kind == fnUser && f.user.Arity() != 2 {
+		return nil, errorAt(10, f.at)
 	}
 	r, err := p.expr()
 	if err != nil {
@@ -229,6 +292,9 @@ func (p *parser) indexAssignAhead() bool {
 func (p *parser) fn() (*fnNode, error) {
 	t, _ := p.peek()
 	p.i++
+	if f := p.userFn(t); f != nil {
+		return &fnNode{kind: fnUser, user: f, at: t.Pos}, nil
+	}
 	if isSpecial(t, "∘") {
 		p.i++ // .
 		f, ok := p.peek()
@@ -245,9 +311,6 @@ func (p *parser) fn() (*fnNode, error) {
 		}
 		p.i += 2
 		return &fnNode{kind: fnInner, glyph: t.Text, g: g.Text, at: t.Pos}, nil
-	}
-	if t.Text == "/" {
-		return nil, errorAt(72, t.Pos)
 	}
 	if next, ok := p.peek(); ok && next.Kind == Prim && next.Text == "/" {
 		p.i++
@@ -323,7 +386,16 @@ func (p *parser) primary() (node, error) {
 		return &constNode{val: v, at: t.Pos}, nil
 	case t.Kind == Name:
 		p.i++
+		if f := p.userFn(t); f != nil {
+			if f.Arity() > 0 {
+				return nil, errorAt(10, t.Pos)
+			}
+			return &callNode{fn: f, at: t.Pos}, nil
+		}
 		return &varNode{name: t.Text, at: t.Pos}, nil
+	case isSpecial(t, "⎕"):
+		p.i++
+		return &quadInNode{at: t.Pos}, nil
 	case isSpecial(t, "("):
 		p.i++
 		n, err := p.expr()

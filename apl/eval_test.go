@@ -245,3 +245,129 @@ func TestIndexAssignErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestFunctions(t *testing.T) {
+	got := run(t,
+		"∇R←FACT N",
+		"R←×/⍳N",
+		"∇",
+		"FACT 5",
+		"∇R←A PLUS B",
+		"R←A+B",
+		"∇",
+		"2 PLUS 3",
+		"1 PLUS FACT 3",
+		"∇R←F N;I",
+		"R←1",
+		"I←0",
+		"L:→(I≥N)/0",
+		"I←I+1",
+		"R←R×I",
+		"→L",
+		"∇",
+		"N←99",
+		"I←7",
+		"F 6",
+		"N,I",
+		"∇HELLO",
+		"⎕←42",
+		"∇",
+		"HELLO",
+		"∇R←FIB N",
+		"→(N>2)/REC",
+		"R←1",
+		"→0",
+		"REC:R←(FIB N-1)+FIB N-2",
+		"∇",
+		"FIB 10",
+		"∇R←DBL X",
+		"R←2×X ∇",
+		"DBL 21",
+		"∇R←PI",
+		"R←3.14",
+		"∇",
+		"2×PI",
+	)
+	want := "120\n5\n7\n720\n99 7\n42\n55\n42\n6.28"
+	if got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}
+
+func TestQuadInput(t *testing.T) {
+	got := run(t, "X←⎕", "1 2 3", "Y←⎕", "1÷0", "2×X", "Y")
+	want := "⎕:\n⎕:\nATTEMPTED DIVISION BY ZERO\n1÷0\n ↑\n⎕:\n2 4 6"
+	if got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+	err := New(&bytes.Buffer{}).Exec("⎕")
+	if e, ok := err.(*Error); !ok || e.Code != 18 {
+		t.Errorf("⎕ without input: got %v", err)
+	}
+}
+
+func TestFunctionErrors(t *testing.T) {
+	setup := []string{
+		"∇R←MON X", "R←X", "∇",
+		"∇R←A DY B", "R←A", "∇",
+		"∇NORES", "1", "∇",
+		"∇R←NOVAL", "1", "∇",
+		"∇R←INF X", "R←INF X", "∇",
+	}
+	cases := []struct {
+		in   string
+		code int
+	}{
+		{"∇MON Y", 5},
+		{"∇", 7},
+		{"∇R←", 6},
+		{"∇A B C D", 3},
+		{"MON←1", 8},
+		{"DY 1", 74},
+		{"1 MON 2", 10},
+		{"1+NORES", 100},
+		{"NOVAL", 100},
+		{"INF 1", 16},
+		{"→1.5", 12},
+	}
+	for _, c := range cases {
+		in := New(&bytes.Buffer{})
+		for _, l := range setup {
+			if err := in.Exec(l); err != nil {
+				t.Fatalf("%s: %v", l, err)
+			}
+		}
+		err := in.Exec(c.in)
+		e, ok := err.(*Error)
+		if !ok || e.Code != c.code {
+			t.Errorf("%s: got %v, want code %d", c.in, err, c.code)
+		}
+	}
+	in := New(&bytes.Buffer{})
+	in.Exec("∇EMPTY")
+	if err := in.Exec("∇"); err == nil || err.(*Error).Code != 75 {
+		t.Errorf("empty function: got %v", err)
+	}
+}
+
+func TestErrorLocation(t *testing.T) {
+	got := run(t, "∇R←BAD X", "R←X÷0", "∇", "BAD 1")
+	want := "ATTEMPTED DIVISION BY ZERO\nBAD[1] R←X÷0\n          ↑"
+	if got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}
+
+func TestCompress(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"1 0 1/⍳3", "1 3"},
+		{"2/5", "5 5"},
+		{"0 2 1/2 3⍴⍳6", "2 2 3\n5 5 6"},
+		{"⍴0/5", "0"},
+	}
+	for _, c := range cases {
+		if got := run(t, c.in); got != c.want {
+			t.Errorf("%s = %q, want %q", c.in, got, c.want)
+		}
+	}
+}

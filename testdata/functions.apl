@@ -1,0 +1,62 @@
+∇R←FACT N
+R←×/⍳N
+∇
+FACT 5
+∇R←A PLUS B
+R←A+B
+∇
+2 PLUS 3
+1 2 PLUS FACT 3
+∇R←FAC N
+→(N>1)/0
+R←1
+→0
+∇
+∇R←F N
+R←1
+L:→(N≤1)/0
+R←R×N
+N←N-1
+→L
+∇
+F 6
+N←99
+F 3
+N
+∇HELLO
+⎕←42
+∇
+HELLO
+∇R←REC N
+→(N=0)/DONE
+R←N+REC N-1
+→0
+DONE:R←0
+∇
+REC 10
+∇R←BAD X
+R←X÷0
+∇
+BAD 1
+FACT 2 3
+∇FACT X
+∇
+∇EMPTY
+∇
+∇Z←INF X
+Z←INF X
+∇
+INF 1
+X←⎕
+1 2 3
+X
+Y←⎕
+1÷0
+7
+Y
+∇R←TWO X
+R←X×2 ∇
+TWO 4
+FACT←3
+PLUS 2
+HELLO+1

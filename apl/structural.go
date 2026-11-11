@@ -11,6 +11,7 @@ var structFns = map[string]*structFn{
 	"⍳": {monad: interval, dyad: indexOf},
 	"⍴": {monad: shapeOf, dyad: reshape},
 	",": {monad: ravel, dyad: catenate},
+	"/": {dyad: compress},
 }
 
 // toInt converts a near-integer to int.
@@ -179,6 +180,52 @@ func indexAssign(x *Array, idx []*Array, v *Array) (*Array, error) {
 			r.Data[p] = v.Data[0]
 		} else {
 			r.Data[p] = v.Data[i]
+		}
+	}
+	return r, nil
+}
+
+// compress is A/B along the last axis; A gives a repeat count per item.
+func compress(a, b *Array) (*Array, error) {
+	if a.Rank() > 1 {
+		return nil, newError(29)
+	}
+	if b.IsScalar() {
+		b = Vector(b.Data)
+	}
+	n := b.Shape[b.Rank()-1]
+	counts := make([]int, n)
+	for i := range counts {
+		v := a.Data[0]
+		if a.Size() != 1 {
+			if a.Size() != n {
+				return nil, newError(55)
+			}
+			v = a.Data[i]
+		}
+		if v < 0 {
+			return nil, newError(22)
+		}
+		c, ok := toInt(v)
+		if !ok {
+			return nil, newError(23)
+		}
+		counts[i] = c
+	}
+	if a.Size() == 0 && n != 0 {
+		return nil, newError(55)
+	}
+	total := 0
+	for _, c := range counts {
+		total += c
+	}
+	shape := append(append([]int(nil), b.Shape[:b.Rank()-1]...), total)
+	r := &Array{Shape: shape, Data: make([]float64, 0, shapeSize(shape))}
+	for row := 0; row < b.Size(); row += n {
+		for i, c := range counts {
+			for range c {
+				r.Data = append(r.Data, b.Data[row+i])
+			}
 		}
 	}
 	return r, nil

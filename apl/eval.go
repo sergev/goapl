@@ -3,8 +3,28 @@ package apl
 // Arrays are treated as immutable once built; results never alias
 // mutable state, so values may be shared between variables.
 
+// eval evaluates n, which must produce a value.
 func (in *Interp) eval(n node) (*Array, error) {
+	v, err := in.evalNode(n)
+	if err == nil && v == nil {
+		err = errorAt(100, n.pos())
+	}
+	return v, err
+}
+
+// evalNode evaluates n; a call of a function without result gives nil.
+func (in *Interp) evalNode(n node) (*Array, error) {
 	switch n := n.(type) {
+	case *callNode:
+		return in.call(n.fn, nil, nil)
+	case *quadInNode:
+		return in.quadInput()
+	case *quadOutNode:
+		v, err := in.eval(n.right)
+		if err != nil {
+			return nil, err
+		}
+		return v, in.print(v)
 	case *constNode:
 		return n.val, nil
 	case *varNode:
@@ -55,6 +75,9 @@ func (in *Interp) eval(n node) (*Array, error) {
 		if err != nil {
 			return nil, err
 		}
+		if n.fn.kind == fnUser {
+			return in.call(n.fn.user, nil, x)
+		}
 		r, err := monad(n.fn, x)
 		return r, setPos(err, n.fn.at)
 	case *dyadNode:
@@ -66,10 +89,44 @@ func (in *Interp) eval(n node) (*Array, error) {
 		if err != nil {
 			return nil, err
 		}
+		if n.fn.kind == fnUser {
+			return in.call(n.fn.user, a, b)
+		}
 		r, err := dyad(n.fn, a, b)
 		return r, setPos(err, n.fn.at)
 	}
 	panic("eval: unknown node")
+}
+
+// run executes a statement, printing its value unless it is an
+// assignment. It returns the branch target, or -1 for no branch.
+func (in *Interp) run(n node) (int, error) {
+	if n == nil {
+		return -1, nil
+	}
+	if b, ok := n.(*branchNode); ok {
+		v, err := in.eval(b.right)
+		if err != nil {
+			return -1, err
+		}
+		if v.Size() == 0 {
+			return -1, nil
+		}
+		t, ok := toInt(v.Data[0])
+		if !ok {
+			return -1, errorAt(12, b.at)
+		}
+		return max(t, 0), nil
+	}
+	v, err := in.evalNode(n)
+	if err != nil || v == nil {
+		return -1, err
+	}
+	switch n.(type) {
+	case *assignNode, *indexAssignNode, *quadOutNode:
+		return -1, nil
+	}
+	return -1, in.print(v)
 }
 
 // evalIndex evaluates index items right to left; nil stays nil.
