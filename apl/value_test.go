@@ -85,9 +85,9 @@ func TestGeneralStructural(t *testing.T) {
 	if r.IsNumeric() {
 		t.Errorf("3⍴'' is numeric")
 	}
-	r, err = catenate(e, Scalar(1), abc)
+	r, err = catenate(e, nil, Scalar(1), abc, false)
 	check("1,'abc'", r, err, "1 abc")
-	r, err = catenate(e, Chars(""), Vector(nil))
+	r, err = catenate(e, nil, Chars(""), Vector(nil), false)
 	if err != nil || r.IsNumeric() || r.Fill() != Char(' ') {
 		t.Errorf("'',⍳0: %+v", r)
 	}

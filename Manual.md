@@ -134,7 +134,18 @@ quotes is an ordinary character.
 | `∧ ∨ ⍲ ⍱` | | and, or, nand, nor |
 | `⍳` | index generator | index of |
 | `⍴` | shape | reshape |
-| `,` | ravel | catenate |
+| `,` | ravel | catenate, laminate |
+| `⍪` | | catenate along the first axis |
+| `⌽ ⊖` | reverse | rotate |
+| `⍉` | transpose | transpose |
+| `↑` | first | take |
+| `↓` | | drop |
+| `∊` | | membership |
+| `~` | | without |
+| `⍋ ⍒` | grade up, down | grade with collating sequence |
+| `⊥` | | decode |
+| `⊤` | | encode |
+| `⌹` | matrix inverse | matrix divide |
 | `/ ⌿` | | compress |
 | `\ ⍀` | | expand |
 | `f/ f⌿` | reduction | N-wise reduction |
@@ -588,15 +599,185 @@ The elements of X as a vector.
 1 2 3 4
 ```
 
-## Catenate `A,B`
+## Catenate `A,B` and `A⍪B`
 
-Joins A and B into one vector. A and B are scalars or vectors.
+`A,B` joins A and B along the last axis, `A⍪B` along the first, and
+`A,[K]B` along axis K. The other axes must agree. An argument with one
+axis less is joined as a single item, and a scalar is repeated to fit.
 
 ```apl
       1 2,3 4
 1 2 3 4
       0,⍳3
 0 1 2 3
+      M←2 3⍴⍳6
+      M,7 8
+1 2 3 7
+4 5 6 8
+      M⍪0
+1 2 3
+4 5 6
+0 0 0
+```
+
+## Laminate `A,[K]B`
+
+With a fractional K, `A,[K]B` joins A and B along a new axis of length
+2, placed before axis ⌈K. A and B have the same shape, or one is a
+scalar.
+
+```apl
+      1 2 3,[0.5]4 5 6
+1 2 3
+4 5 6
+      1 2 3,[1.5]4 5 6
+1 4
+2 5
+3 6
+```
+
+## Reverse and rotate `⌽X`, `A⌽B`
+
+`⌽X` reverses the order along the last axis; `⊖X` along the first;
+`⌽[K]X` along axis K. `A⌽B` rotates each line left by A (right if A is
+negative); A is a scalar, or an array with one number per line.
+
+```apl
+      ⌽'HELLO'
+OLLEH
+      ⊖2 3⍴⍳6
+4 5 6
+1 2 3
+      1⌽1 2 3 4
+2 3 4 1
+      ¯1⌽1 2 3 4
+4 1 2 3
+      1 2⌽2 3⍴⍳6
+2 3 1
+6 4 5
+```
+
+## Transpose `⍉X`, `A⍉B`
+
+`⍉X` reverses the order of the axes: a matrix is flipped over its
+diagonal. In `A⍉B`, axis I of B becomes axis `A[I]` of the result. If
+two axes go to the same place, the result takes their diagonal.
+
+```apl
+      ⍉2 3⍴⍳6
+1 4
+2 5
+3 6
+      1 1⍉3 3⍴⍳9
+1 5 9
+      ⍴2 1 3⍉2 3 4⍴⍳24
+3 2 4
+```
+
+## Take and drop `A↑B`, `A↓B`
+
+`A↑B` takes the first `A[K]` items along axis K, or the last if `A[K]`
+is negative. Taking more than there are pads with fill elements. `A↓B`
+drops them instead. A has at most one number per axis of B; the other
+axes are kept whole.
+
+```apl
+      3↑1 2 3 4
+1 2 3
+      ¯2↑1 2 3 4
+3 4
+      6↑1 2 3
+1 2 3 0 0 0
+      1↓1 2 3
+2 3
+      2 2↑3 3⍴⍳9
+1 2
+4 5
+      ¯1 ¯1↓3 3⍴⍳9
+1 2
+4 5
+```
+
+## First `↑X`
+
+The first element of X, or its fill element if X is empty.
+
+```apl
+      ↑5 6 7
+5
+      ↑'ABC'
+A
+      ↑⍳0
+0
+```
+
+## Membership and without `A∊B`, `A~B`
+
+`A∊B` is 1 for each element of A that occurs in B. `A~B` is the vector A
+without the elements that occur in B. Comparisons use `⎕CT`.
+
+```apl
+      'HELLO'∊'AEIOU'
+0 1 0 0 1
+      1 2 3 4 5~2 4
+1 3 5
+```
+
+## Grade `⍋X`, `⍒X`
+
+`⍋X` gives the indices that would sort X ascending; `⍒X` descending.
+Equal items keep their order. For a matrix, rows are compared. Numbers
+compare by value, characters by their Unicode codes; with a character
+vector on the left, `A⍋B` orders characters by their position in A.
+
+```apl
+      ⍋3 1 2 1
+2 4 3 1
+      X←5 2 8 1
+      X[⍒X]
+8 5 2 1
+      'ZYX'⍋'XYZ'
+3 2 1
+```
+
+## Decode and encode `A⊥B`, `A⊤B`
+
+`A⊥B` is the value of the digits B in the number system with radices A.
+`A⊤B` gives the digits of B in radices A; a radix 0 takes all that is
+left. A single radix applies to every digit.
+
+```apl
+      10⊥1 2 3
+123
+      24 60 60⊥1 2 3
+3723
+      2⊥1 0 1
+5
+      10 10 10⊤123
+1 2 3
+      0 10⊤123
+12 3
+      2 2 2⊤5 6
+1 1
+0 1
+1 0
+```
+
+## Matrix inverse and divide `⌹X`, `A⌹B`
+
+`⌹X` is the inverse of a square matrix X. `A⌹B` solves the linear
+equations `B+.×X` = A for X. If B has more rows than columns, the
+result is the least-squares fit. A singular matrix is a `DOMAIN
+ERROR`. A vector is a one-column matrix.
+
+```apl
+      ⌹2 2⍴2 0 0 4
+0.5    0
+  0 0.25
+      (5 6)⌹2 2⍴1 2 3 4
+¯4 4.5
+      1 2 3⌹3 2⍴1 1 1 2 1 3
+0 1
 ```
 
 ## Compress and replicate `A/B`
@@ -1291,6 +1472,7 @@ goapl adds to the language of the Pascal original:
 - System variables `⎕IO ⎕CT ⎕PP ⎕RL`.
 - `○ ! ?` monadic and dyadic, `⍲ ⍱`.
 - Scan, axis, `⌿ ⍀`, N-wise reduction, expand.
+- Catenate on any rank, laminate, `⍪ ⌽ ⊖ ⍉ ↑ ↓ ∊ ~ ⍋ ⍒ ⊥ ⊤ ⌹`.
 
 goapl follows APL2 where the original differs:
 
@@ -1358,6 +1540,17 @@ header     := ∇ [ name ← ] [ name ] name [ name ] { ; name }
 | `⍳` | first Y indices | index of Y in X |
 | `⍴` | shape of Y | Y reshaped to X |
 | `,` | Y as vector | X joined to Y |
+| `⍪` | | X joined to Y along the first axis |
+| `⌽ ⊖` | Y reversed | Y rotated by X |
+| `⍉` | Y transposed | Y with axes moved to X |
+| `↑` | first of Y | first X of Y |
+| `↓` | | Y without first X |
+| `∊` | | X occurs in Y |
+| `~` | | X without Y |
+| `⍋ ⍒` | sorting indices of Y | same, collating sequence X |
+| `⊥` | | Y in radix X |
+| `⊤` | | digits of Y in radix X |
+| `⌹` | inverse of Y | X divided by matrix Y |
 | `/ ⌿` | | Y replicated by X |
 | `\ ⍀` | | Y expanded by X |
 | `f/ f⌿` | reduce Y by f | reduce windows of X items |

@@ -91,9 +91,6 @@ func parityCases() []parityCase {
 		// glyphs in APLCharSet that are not functions
 		{name: "charset_only_DoubleQuote", lines: []string{`1"2`}, class: SyntaxError},
 		{name: "charset_only_omega", lines: []string{"1ω2"}, class: SyntaxError},
-		{name: "charset_only_epsilon", lines: []string{"1ε2"}, class: NonceError},
-		{name: "charset_only_UpArrow", lines: []string{"1↑2"}, class: NonceError},
-		{name: "charset_only_DownArrow", lines: []string{"1↓2"}, class: NonceError},
 		{name: "charset_only_alpha", lines: []string{"1α2"}, class: SyntaxError},
 		{name: "charset_only_UnderScore", lines: []string{"1_2"}, class: SyntaxError},
 		{name: "charset_only_del", lines: []string{"1∇2"}, class: SyntaxError},
@@ -102,8 +99,6 @@ func parityCases() []parityCase {
 		{name: "charset_only_EastCap", lines: []string{"1⊃2"}, class: SyntaxError},
 		{name: "charset_only_WestCap", lines: []string{"1⊂2"}, class: SyntaxError},
 		{name: "charset_only_NorthCap", lines: []string{"1∪2"}, class: SyntaxError},
-		{name: "charset_only_ibeam", lines: []string{"1⊥2"}, class: NonceError},
-		{name: "charset_only_TBeam", lines: []string{"1⊤2"}, class: NonceError},
 		{name: "charset_only_LeftBracket", lines: []string{"1[2]"}, class: RankError},
 
 		// Deliberate differences from the prototype.
@@ -113,6 +108,12 @@ func parityCases() []parityCase {
 		{name: "differs_reduce_circle", lines: []string{"○/2 8"}, want: "¯0.1455000338"},
 		// 1\2 was an error; \ is expand.
 		{name: "differs_BackwardSlash", lines: []string{`1\2`}, want: "2"},
+		// Glyphs that were errors are APL2 functions.
+		{name: "differs_epsilon", lines: []string{"1ε2"}, want: "0"},
+		{name: "differs_UpArrow", lines: []string{"1↑2"}, want: "2"},
+		{name: "differs_DownArrow", lines: []string{"⍴1↓2"}, want: "0"},
+		{name: "differs_ibeam", lines: []string{"1⊥2"}, want: "2"},
+		{name: "differs_TBeam", lines: []string{"1⊤2"}, want: "0"},
 		// 1?2 was an error; ? is deal.
 		{name: "differs_QuestionMark", lines: []string{"1?2"}, want: "1"},
 		// Reducing a scalar, one item or an empty axis were errors.

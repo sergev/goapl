@@ -31,9 +31,9 @@ V[1]←)
 V[1 2)]
 ⎕←)
 →(
-⍝ Functions that are not available
-↑5
-1↓2
+⍝ Functions without a monadic form
+↓5
+⍪5
 ⍝ Infinity
 *1000
 -*1000

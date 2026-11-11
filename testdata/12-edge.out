@@ -122,15 +122,15 @@ SYNTAX ERROR
 SYNTAX ERROR
 →(
   ^
-      ⍝ Functions that are not available
-      ↑5
-NONCE ERROR
-↑5
+      ⍝ Functions without a monadic form
+      ↓5
+VALENCE ERROR
+↓5
 ^
-      1↓2
-NONCE ERROR
-1↓2
- ^
+      ⍪5
+VALENCE ERROR
+⍪5
+^
       ⍝ Infinity
       *1000
 ∞

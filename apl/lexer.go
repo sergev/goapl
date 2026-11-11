@@ -45,7 +45,7 @@ func (t Token) String() string {
 }
 
 const (
-	primGlyphs    = "+-×÷*⍳⍴,~=≠<≤≥>∧∨⍲⍱⌈⌊○/⌿\\⍀?↑↓⊥⊤|ε∊⌽⊖⍉⍋⍒!⍟"
+	primGlyphs    = "+-×÷*⍳⍴,⍪~=≠<≤≥>∧∨⍲⍱⌈⌊○/⌿\\⍀?↑↓⊥⊤|ε∊⌽⊖⍉⍋⍒!⍟⌹"
 	specialGlyphs = "←→∇⎕⍞()[];:.∘"
 )
 
@@ -110,6 +110,9 @@ func Lex(line string) ([]Token, error) {
 			}
 			toks = append(toks, Token{Kind: Name, Pos: start, Text: string(src[start:i])})
 		case strings.ContainsRune(primGlyphs, c):
+			if c == 'ε' {
+				c = '∊'
+			}
 			toks = append(toks, Token{Kind: Prim, Pos: i, Text: string(c)})
 			i++
 		case strings.ContainsRune(specialGlyphs, c):

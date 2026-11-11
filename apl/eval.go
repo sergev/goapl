@@ -217,10 +217,13 @@ func (in *Interp) monad(f *fnNode, ax, x *Array) (*Array, error) {
 	case fnInner, fnOuter:
 		return nil, newError(SyntaxError)
 	}
+	sf, st := scalarFns[f.glyph], structFns[f.glyph]
+	if st != nil && st.monadAxis != nil {
+		return st.monadAxis(&in.env, ax, x)
+	}
 	if ax != nil {
 		return nil, newError(AxisError)
 	}
-	sf, st := scalarFns[f.glyph], structFns[f.glyph]
 	switch {
 	case sf != nil && sf.monad != nil:
 		return applyMonad(&in.env, sf.monad, x)
@@ -250,20 +253,13 @@ func (in *Interp) dyad(f *fnNode, ax, a, b *Array) (*Array, error) {
 	case fnOuter:
 		return outer(&in.env, scalarFns[f.glyph], a, b)
 	}
-	if st := structFns[f.glyph]; st != nil && st.dyadAxis != nil {
-		if b.IsScalar() {
-			b = &Array{Shape: []int{1}, Data: b.Data, Elems: b.Elems}
-		}
-		k, err := in.axisIndex(ax, b.Rank(), f.first)
-		if err != nil {
-			return nil, err
-		}
-		return st.dyadAxis(&in.env, a, b, k)
+	sf, st := scalarFns[f.glyph], structFns[f.glyph]
+	if st != nil && st.dyadAxis != nil {
+		return st.dyadAxis(&in.env, ax, a, b)
 	}
 	if ax != nil {
 		return nil, newError(AxisError)
 	}
-	sf, st := scalarFns[f.glyph], structFns[f.glyph]
 	switch {
 	case sf != nil && sf.dyad != nil:
 		return applyDyad(&in.env, sf, a, b)

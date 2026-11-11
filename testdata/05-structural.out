@@ -143,14 +143,6 @@ RANK ERROR
 RANK ERROR
 5⍳1
  ^
-      (2 2⍴1),1
-RANK ERROR
-(2 2⍴1),1
-       ^
-      1,2 2⍴1
-RANK ERROR
-1,2 2⍴1
- ^
       1 0/1 2 3
 LENGTH ERROR
 1 0/1 2 3

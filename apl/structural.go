@@ -1,22 +1,51 @@
 package apl
 
-// structFn is a structural primitive. dyadAxis, if set, takes an axis
-// k from 0; B is never a scalar there.
+// structFn is a structural primitive. The axis forms take the value of
+// [K], or nil without one.
 type structFn struct {
-	monad    func(e *env, x *Array) (*Array, error)
-	dyad     func(e *env, a, b *Array) (*Array, error)
-	dyadAxis func(e *env, a, b *Array, k int) (*Array, error)
+	monad     func(e *env, x *Array) (*Array, error)
+	dyad      func(e *env, a, b *Array) (*Array, error)
+	monadAxis func(e *env, ax, x *Array) (*Array, error)
+	dyadAxis  func(e *env, ax, a, b *Array) (*Array, error)
 }
 
 var structFns = map[string]*structFn{
 	"⍳":  {monad: interval, dyad: indexOf},
 	"⍴":  {monad: shapeOf, dyad: reshape},
-	",":  {monad: ravel, dyad: catenate},
-	"/":  {dyadAxis: compress},
-	"⌿":  {dyadAxis: compress},
-	"\\": {dyadAxis: expand},
-	"⍀":  {dyadAxis: expand},
+	",":  {monad: ravel, dyadAxis: catenateLast},
+	"⍪":  {dyadAxis: catenateFirst},
+	"/":  {dyadAxis: alongAxis(compress, false)},
+	"⌿":  {dyadAxis: alongAxis(compress, true)},
+	"\\": {dyadAxis: alongAxis(expand, false)},
+	"⍀":  {dyadAxis: alongAxis(expand, true)},
+	"⌽":  {monadAxis: reverseLast, dyadAxis: rotateLast},
+	"⊖":  {monadAxis: reverseFirst, dyadAxis: rotateFirst},
+	"⍉":  {monad: transpose, dyad: transposeAxes},
+	"↑":  {monad: first, dyad: take},
+	"↓":  {dyad: drop},
+	"∊":  {dyad: member},
+	"~":  {dyad: without},
+	"⍋":  {monad: gradeUp, dyad: gradeUpCollate},
+	"⍒":  {monad: gradeDown, dyad: gradeDownCollate},
+	"⊥":  {dyad: decode},
+	"⊤":  {dyad: encode},
+	"⌹":  {monad: inverse, dyad: matDivide},
 	"?":  {dyad: deal},
+}
+
+// alongAxis adapts f, which takes an axis from 0 and a non-scalar B,
+// to [K]; without [K] it works along the first or last axis.
+func alongAxis(f func(e *env, a, b *Array, k int) (*Array, error), first bool) func(e *env, ax, a, b *Array) (*Array, error) {
+	return func(e *env, ax, a, b *Array) (*Array, error) {
+		if b.IsScalar() {
+			b = &Array{Shape: []int{1}, Data: b.Data, Elems: b.Elems}
+		}
+		k, err := e.axisIndex(ax, b.Rank(), first)
+		if err != nil {
+			return nil, err
+		}
+		return f(e, a, b, k)
+	}
 }
 
 // deal is A?B: A distinct random indices out of the first B.
@@ -136,22 +165,6 @@ func reshape(_ *env, a, b *Array) (*Array, error) {
 		}
 	}
 	return b.gather(shape, pos), nil
-}
-
-// catenate is A,B for scalars and vectors.
-func catenate(_ *env, a, b *Array) (*Array, error) {
-	if a.Rank() > 1 || b.Rank() > 1 {
-		return nil, newError(RankError)
-	}
-	n := a.Size() + b.Size()
-	if a.IsNumeric() && b.IsNumeric() {
-		r := make([]float64, 0, n)
-		r = append(r, a.Data...)
-		return Vector(append(r, b.Data...)), nil
-	}
-	r := make([]Value, 0, n)
-	r = append(r, a.elems()...)
-	return General([]int{n}, append(r, b.elems()...), a.Fill()), nil
 }
 
 // indexPositions returns flat offsets selected by idx (nil = whole axis,

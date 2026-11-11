@@ -9,20 +9,8 @@ Already done: `⍝` comments; `⌈ ⌊ | ⍟` monadic and dyadic; compress `A/B`
 APL2 error classes and behavior where the original differs (T1);
 arrays of any rank with general (character, mixed, nested) elements (T2);
 `⎕IO ⎕CT ⎕PP ⎕RL` (T3); characters, strings and `⍞` (T4);
-`○ ! ? ⍲ ⍱` (T5); scan, axis, N-wise reduction, expand (T6).
-
-## T7. Structural functions
-
-- Catenate and laminate on any rank with axis: `,[k]`, `,[0.5]`, `⍪`.
-- `⌽ ⊖` reverse and rotate, with axis.
-- `⍉` transpose, monadic and dyadic.
-- `↑ ↓` take and drop.
-- `∊` membership; `A~B` without.
-- `⍋ ⍒` grade up and down (numbers, then characters with a collating
-  sequence).
-- `⊥ ⊤` decode and encode.
-- `⌹` matrix inverse and matrix divide.
-- Dyadic `⍳` and reshape on any rank.
+`○ ! ? ⍲ ⍱` (T5); scan, axis, N-wise reduction, expand (T6);
+`, ⍪ ⌽ ⊖ ⍉ ↑ ↓ ∊ ~ ⍋ ⍒ ⊥ ⊤ ⌹` (T7).
 
 ## T8. Format and execute
 
