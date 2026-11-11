@@ -29,7 +29,8 @@ func (in *Interp) Exec(line string) error {
 	if err != nil {
 		return err
 	}
-	if _, ok := n.(*assignNode); ok {
+	switch n.(type) {
+	case *assignNode, *indexAssignNode:
 		return nil
 	}
 	return in.print(v)

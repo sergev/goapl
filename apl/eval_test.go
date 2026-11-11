@@ -132,3 +132,116 @@ func TestFormat(t *testing.T) {
 		t.Errorf("rank 3:\n%s", got)
 	}
 }
+
+func TestStructural(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"⍳3", "1 2 3"},
+		{"⍳0", ""},
+		{"⍳,4", "1 2 3 4"},
+		{"2×⍳5", "2 4 6 8 10"},
+		{"⍴1 2 3", "3"},
+		{"⍴5", ""},
+		{"⍴2 3⍴⍳6", "2 3"},
+		{",2 2⍴⍳4", "1 2 3 4"},
+		{",5", "5"},
+		{"1 2 3⍳2", "2"},
+		{"1 2 3⍳2 5", "2 4"},
+		{"3⍴1 2", "1 2 1"},
+		{"2 3⍴⍳6", "1 2 3\n4 5 6"},
+		{"⍴0⍴5", "0"},
+		{"3⍴0⍴5", "0 0 0"},
+		{"1 2,3 4", "1 2 3 4"},
+		{"5,⍳3", "5 1 2 3"},
+		{"1,2", "1 2"},
+		{"1 2 3+.×4 5 6", "32"},
+		{"(2 3⍴⍳6)+.×3 2⍴⍳6", "22 28\n49 64"},
+		{"1 2 3∧.=1 2 3", "1"},
+		{"2+.×3", "6"},
+		{"1 2∘.×1 2 3", "1 2 3\n2 4 6"},
+		{"⍴(⍳2)∘.+2 3⍴⍳6", "2 2 3"},
+		{"(⍳5)[3]", "3"},
+		{"(⍳5)[2 2⍴1 2 3 4]", "1 2\n3 4"},
+	}
+	for _, c := range cases {
+		if got := run(t, c.in); got != c.want {
+			t.Errorf("%s = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
+func TestIndex(t *testing.T) {
+	got := run(t,
+		"A←3 4⍴⍳12",
+		"A[2;3]",
+		"A[1 3;2 4]",
+		"A[;1]",
+		"A[2;3]←0",
+		"A[2;]",
+		"A[;4]←7 8 9",
+		"A[;4]",
+		"V←⍳5",
+		"V[2 4]←0",
+		"V",
+		"V[V[1]]←9",
+		"V",
+	)
+	want := "7\n 2  4\n10 12\n1 5 9\n5 6 0 8\n7 8 9\n1 0 3 0 5\n9 0 3 0 5"
+	if got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}
+
+func TestStructuralErrors(t *testing.T) {
+	cases := []struct {
+		in   string
+		code int
+	}{
+		{"⍳1 2", 21},
+		{"⍳¯1", 22},
+		{"⍳2.5", 23},
+		{"(2 2⍴1)⍳1", 29},
+		{"(2 2⍴1)⍴1", 56},
+		{"2 2 2 2⍴1", 60},
+		{"(2 2⍴1),1", 53},
+		{"1 2+.×1 2 3", 52},
+		{"+.,1", 27},
+		{"1∘.⍳1", 26},
+		{"∘.+3", 13},
+		{"(⍳5)[6]", 38},
+		{"(⍳5)[0]", 38},
+		{"(⍳5)[1.5]", 37},
+		{"(⍳5)[1;1]", 35},
+		{"(⍳5)[1", 34},
+		{"V[1]←2", 100},
+		{"(2 2⍴⍳4)∘.+2 2⍴1", 60},
+	}
+	for _, c := range cases {
+		err := New(&bytes.Buffer{}).Exec(c.in)
+		e, ok := err.(*Error)
+		if !ok || e.Code != c.code {
+			t.Errorf("%s: got %v, want code %d", c.in, err, c.code)
+		}
+	}
+}
+
+func TestIndexAssignErrors(t *testing.T) {
+	cases := []struct {
+		in   string
+		code int
+	}{
+		{"V[1 2]←1 2 3", 36},
+		{"V[6]←1", 38},
+		{"V[1;1]←1", 35},
+	}
+	for _, c := range cases {
+		in := New(&bytes.Buffer{})
+		if err := in.Exec("V←⍳5"); err != nil {
+			t.Fatal(err)
+		}
+		err := in.Exec(c.in)
+		e, ok := err.(*Error)
+		if !ok || e.Code != c.code {
+			t.Errorf("%s: got %v, want code %d", c.in, err, c.code)
+		}
+	}
+}

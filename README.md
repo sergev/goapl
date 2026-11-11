@@ -52,7 +52,9 @@ session, as in the original.
 
 Data are floating-point arrays of rank 0 to 3. Errors use the numbered
 messages of the original `APLfile`. Comparisons use a tolerance of 1E¯13.
-Output uses conventional APL notation (10 significant digits, `¯` for
+Indexing is more general than in the original: indices may be arrays
+(`V[2 4]`, `M[1 3;]`) and an axis may be elided (`M[;2]`); the original
+accepted scalar indices only. Output uses conventional APL notation (10 significant digits, `¯` for
 negative numbers) rather than the original fixed-width columns.
 
 ## Roadmap
@@ -74,4 +76,6 @@ and review the diff.
 
 ## Status
 
-Step 2 done: scalar functions, reduction, assignment, parentheses.
+Step 3 done: scalar and structural functions, reduction, inner and
+outer product, indexing and indexed assignment. User-defined functions,
+branching and `⎕` come next.

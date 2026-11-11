@@ -2,9 +2,10 @@ package apl
 
 // Grammar, read left to right but binding right to left:
 //
-//	expr    := fn expr | name ← expr | operand [fn expr]
-//	operand := number | name | ( expr )
-//	fn      := prim | prim /
+//	expr    := fn expr | name ← expr | name [index] ← expr | operand [fn expr]
+//	operand := (number | name | ( expr )) {[index]}
+//	index   := [expr] {; [expr]}
+//	fn      := prim | prim / | prim . prim | ∘ . prim
 
 type node interface{ pos() int }
 
@@ -24,6 +25,19 @@ type assignNode struct {
 	right node
 }
 
+type indexNode struct {
+	target node
+	idx    []node // nil item = whole axis
+	at     int
+}
+
+type indexAssignNode struct {
+	name  string
+	idx   []node
+	at    int
+	right node
+}
+
 type monadNode struct {
 	fn    *fnNode
 	right node
@@ -39,19 +53,26 @@ type fnKind int
 const (
 	fnPrim   fnKind = iota // primitive function
 	fnReduce               // f/
+	fnInner                // f.g
+	fnOuter                // ∘.f
 )
 
 type fnNode struct {
 	kind  fnKind
-	glyph string
+	glyph string // f
+	g     string // g of inner product
 	at    int
 }
 
 func (n *constNode) pos() int  { return n.at }
 func (n *varNode) pos() int    { return n.at }
 func (n *assignNode) pos() int { return n.at }
-func (n *monadNode) pos() int  { return n.fn.at }
-func (n *dyadNode) pos() int   { return n.left.pos() }
+func (n *indexNode) pos() int  { return n.target.pos() }
+func (n *indexAssignNode) pos() int {
+	return n.at
+}
+func (n *monadNode) pos() int { return n.fn.at }
+func (n *dyadNode) pos() int  { return n.left.pos() }
 
 type parser struct {
 	toks []Token
@@ -114,7 +135,17 @@ func (p *parser) atExprEnd() bool {
 
 func (p *parser) atFn() bool {
 	t, ok := p.peek()
+	if ok && isSpecial(t, "∘") {
+		next, ok := p.peekAt(1)
+		return ok && isSpecial(next, ".")
+	}
 	return ok && t.Kind == Prim
+}
+
+// isScalarDyad reports whether g names a dyadic scalar function.
+func isScalarDyad(g string) bool {
+	sf := scalarFns[g]
+	return sf != nil && sf.dyad != nil
 }
 
 func (p *parser) expr() (node, error) {
@@ -141,6 +172,19 @@ func (p *parser) expr() (node, error) {
 		}
 		return &assignNode{name: t.Text, at: t.Pos, right: r}, nil
 	}
+	if t.Kind == Name && p.indexAssignAhead() {
+		p.i += 2 // name [
+		idx, err := p.index()
+		if err != nil {
+			return nil, err
+		}
+		p.i++ // ←
+		r, err := p.expr()
+		if err != nil {
+			return nil, err
+		}
+		return &indexAssignNode{name: t.Text, idx: idx, at: t.Pos, right: r}, nil
+	}
 	left, err := p.operand()
 	if err != nil {
 		return nil, err
@@ -162,9 +206,46 @@ func (p *parser) expr() (node, error) {
 	return &dyadNode{fn: f, left: left, right: r}, nil
 }
 
+// indexAssignAhead reports whether "name [ ... ] ←" starts here.
+func (p *parser) indexAssignAhead() bool {
+	if t, ok := p.peekAt(1); !ok || !isSpecial(t, "[") {
+		return false
+	}
+	depth := 0
+	for k := p.i + 1; k < len(p.toks); k++ {
+		switch t := p.toks[k]; {
+		case isSpecial(t, "["):
+			depth++
+		case isSpecial(t, "]"):
+			depth--
+			if depth == 0 {
+				return k+1 < len(p.toks) && isSpecial(p.toks[k+1], "←")
+			}
+		}
+	}
+	return false
+}
+
 func (p *parser) fn() (*fnNode, error) {
 	t, _ := p.peek()
 	p.i++
+	if isSpecial(t, "∘") {
+		p.i++ // .
+		f, ok := p.peek()
+		if !ok || f.Kind != Prim || !isScalarDyad(f.Text) {
+			return nil, errorAt(26, t.Pos)
+		}
+		p.i++
+		return &fnNode{kind: fnOuter, glyph: f.Text, at: t.Pos}, nil
+	}
+	if dot, ok := p.peek(); ok && isSpecial(dot, ".") {
+		g, ok := p.peekAt(1)
+		if !ok || g.Kind != Prim || !isScalarDyad(t.Text) || !isScalarDyad(g.Text) {
+			return nil, errorAt(27, t.Pos)
+		}
+		p.i += 2
+		return &fnNode{kind: fnInner, glyph: t.Text, g: g.Text, at: t.Pos}, nil
+	}
 	if t.Text == "/" {
 		return nil, errorAt(72, t.Pos)
 	}
@@ -174,7 +255,7 @@ func (p *parser) fn() (*fnNode, error) {
 		if g == "○" {
 			g = "⍟" // prototype quirk: ○/ is log to base
 		}
-		if sf := scalarFns[g]; sf == nil || sf.dyad == nil {
+		if !isScalarDyad(g) {
 			return nil, errorAt(72, t.Pos)
 		}
 		return &fnNode{kind: fnReduce, glyph: g, at: t.Pos}, nil
@@ -183,6 +264,54 @@ func (p *parser) fn() (*fnNode, error) {
 }
 
 func (p *parser) operand() (node, error) {
+	n, err := p.primary()
+	if err != nil {
+		return nil, err
+	}
+	for {
+		t, ok := p.peek()
+		if !ok || !isSpecial(t, "[") {
+			return n, nil
+		}
+		p.i++
+		idx, err := p.index()
+		if err != nil {
+			return nil, err
+		}
+		n = &indexNode{target: n, idx: idx, at: t.Pos}
+	}
+}
+
+// index parses index items after "[" up to and including "]".
+func (p *parser) index() ([]node, error) {
+	var idx []node
+	for {
+		t, ok := p.peek()
+		if !ok {
+			return nil, errorAt(34, p.end)
+		}
+		var item node
+		if !isSpecial(t, ";") && !isSpecial(t, "]") {
+			var err error
+			if item, err = p.expr(); err != nil {
+				return nil, err
+			}
+			if t, ok = p.peek(); !ok {
+				return nil, errorAt(34, p.end)
+			}
+		}
+		idx = append(idx, item)
+		p.i++
+		switch {
+		case isSpecial(t, "]"):
+			return idx, nil
+		case !isSpecial(t, ";"):
+			return nil, errorAt(34, t.Pos)
+		}
+	}
+}
+
+func (p *parser) primary() (node, error) {
 	t, _ := p.peek()
 	switch {
 	case t.Kind == Number:
