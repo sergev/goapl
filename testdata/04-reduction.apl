@@ -43,7 +43,6 @@
 ⍝ Errors
 ⍟/⍳0
 ÷/1 0
-2+/1 2 3
 ⍝ Only dyadic scalar functions can be reduced
 ~/1 0
 ⍳/1 2

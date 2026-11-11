@@ -135,8 +135,10 @@ quotes is an ordinary character.
 | `⍳` | index generator | index of |
 | `⍴` | shape | reshape |
 | `,` | ravel | catenate |
-| `/` | | compress |
-| `f/` | reduction | |
+| `/ ⌿` | | compress |
+| `\ ⍀` | | expand |
+| `f/ f⌿` | reduction | N-wise reduction |
+| `f\ f⍀` | scan | |
 | `f.g` | | inner product |
 | `∘.f` | | outer product |
 
@@ -601,16 +603,40 @@ Joins A and B into one vector. A and B are scalars or vectors.
 
 Each element of B is repeated as many times as the corresponding element
 of A. With a boolean A this selects elements. A scalar A applies to every
-element. For a matrix, it works along the rows.
+element, and a single element of B is repeated to match A. For a matrix,
+it works along the rows; `A⌿B` works along the columns, and `A/[K]B`
+along axis K.
 
 ```apl
       1 0 1 0/⍳4
 1 3
       2 0 1/7 8 9
 7 7 9
+      1 0 1/5
+5 5
       1 0 1/2 3⍴⍳6
 1 3
 4 6
+      0 1⌿2 3⍴⍳6
+4 5 6
+```
+
+## Expand `A\B`
+
+A is boolean. The elements of B go where A has 1, in order, and fill
+elements (0 or blank) go where A has 0. The number of 1s in A must
+match the length of B. `A⍀B` and `A\[K]B` work along the first axis and
+axis K.
+
+```apl
+      1 0 1 1 0\1 2 3
+1 0 2 3 0
+      1 0 1\'AB'
+A B
+      1 0 1⍀2 3⍴⍳6
+1 2 3
+0 0 0
+4 5 6
 ```
 
 # Operators
@@ -669,6 +695,64 @@ largest number; `⍟` has none.
 DOMAIN ERROR
 ⍟/⍳0
 ^
+```
+
+## Scan `f\X`
+
+Item I of the result is the reduction of the first I items of X:
+`+\X` gives running sums. It works along the last axis, like reduction.
+
+```apl
+      +\1 2 3 4 5
+1 3 6 10 15
+      ×\1 2 3 4 5
+1 2 6 24 120
+      ⌈\3 1 4 1 5
+3 3 4 4 5
+      -\1 2 3 4
+1 ¯1 2 ¯2
+      +\2 3⍴⍳6
+1 3  6
+4 9 15
+```
+
+## Axis
+
+Reduction and scan work along the last axis. `f⌿` and `f⍀` work along
+the first axis. `f/[K]` and `f\[K]` work along axis K, counted from
+`⎕IO`. A bad axis is an `AXIS ERROR`.
+
+```apl
+      M←2 3⍴⍳6
+      +/M
+6 15
+      +⌿M
+5 7 9
+      +/[1]M
+5 7 9
+      +\[1]M
+1 2 3
+5 7 9
+      +/[3]M
+AXIS ERROR
++/[3]M
+^
+```
+
+## N-wise reduction `N f/X`
+
+Reduces each window of N consecutive items. A negative N reverses each
+window first; N may be at most one more than the length.
+
+```apl
+      2+/1 2 3 4 5
+3 5 7 9
+      3+/1 2 3 4 5
+6 9 12
+      2-/1 4 9 16
+¯3 ¯5 ¯7
+      ¯2-/1 4 9 16
+3 5 7
 ```
 
 ## Inner product `A f.g B`
@@ -1185,6 +1269,7 @@ LENGTH ERROR
 | LENGTH ERROR | shapes of the same rank differ; `X[I]←Y` with the wrong shape |
 | RANK ERROR | ranks differ; a matrix where a vector is needed; wrong number of indices |
 | INDEX ERROR | `V[0]`, `V[1+⍴V]` |
+| AXIS ERROR | `+/[3]M` for a matrix M; an axis on a function without one |
 | DEFN ERROR | bad function header; redefining a function |
 | NONCE ERROR | a glyph that goapl knows but does not implement yet |
 | SYSTEM LIMIT | more than 1000 nested calls |
@@ -1205,6 +1290,7 @@ goapl adds to the language of the Pascal original:
 - Characters, strings and `⍞`.
 - System variables `⎕IO ⎕CT ⎕PP ⎕RL`.
 - `○ ! ?` monadic and dyadic, `⍲ ⍱`.
+- Scan, axis, `⌿ ⍀`, N-wise reduction, expand.
 
 goapl follows APL2 where the original differs:
 
@@ -1243,8 +1329,9 @@ expr       := fn expr
 operand    := ( number... | 'string' | name | niladic-fn | ⎕ | ⍞ | ( expr ) )
               { [ index ] }
 index      := [ expr ] { ; [ expr ] }
-fn         := primitive | primitive / | primitive . primitive
-            | ∘ . primitive | user-fn
+fn         := ( primitive | primitive op ) [ [ expr ] ]
+            | primitive . primitive | ∘ . primitive | user-fn
+op         := / | ⌿ | \ | ⍀
 name       := variable | ⎕IO | ⎕CT | ⎕PP | ⎕RL
 header     := ∇ [ name ← ] [ name ] name [ name ] { ; name }
 ```
@@ -1271,7 +1358,9 @@ header     := ∇ [ name ← ] [ name ] name [ name ] { ; name }
 | `⍳` | first Y indices | index of Y in X |
 | `⍴` | shape of Y | Y reshaped to X |
 | `,` | Y as vector | X joined to Y |
-| `/` | | Y replicated by X |
-| `f/` | reduce Y by f | |
+| `/ ⌿` | | Y replicated by X |
+| `\ ⍀` | | Y expanded by X |
+| `f/ f⌿` | reduce Y by f | reduce windows of X items |
+| `f\ f⍀` | scan Y by f | |
 | `f.g` | | inner product |
 | `∘.f` | | outer product |

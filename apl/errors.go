@@ -11,6 +11,7 @@ const (
 	LengthError
 	RankError
 	IndexError
+	AxisError
 	DefnError
 	NonceError
 	SystemLimit
@@ -25,6 +26,7 @@ var classNames = map[Class]string{
 	LengthError:  "LENGTH ERROR",
 	RankError:    "RANK ERROR",
 	IndexError:   "INDEX ERROR",
+	AxisError:    "AXIS ERROR",
 	DefnError:    "DEFN ERROR",
 	NonceError:   "NONCE ERROR",
 	SystemLimit:  "SYSTEM LIMIT",

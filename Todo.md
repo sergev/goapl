@@ -9,15 +9,7 @@ Already done: `⍝` comments; `⌈ ⌊ | ⍟` monadic and dyadic; compress `A/B`
 APL2 error classes and behavior where the original differs (T1);
 arrays of any rank with general (character, mixed, nested) elements (T2);
 `⎕IO ⎕CT ⎕PP ⎕RL` (T3); characters, strings and `⍞` (T4);
-`○ ! ? ⍲ ⍱` (T5).
-
-## T6. Operators and axis
-
-- Scan `f\`.
-- Reduce and scan along an axis: `f/[k]`, `f\[k]`, and `⌿ ⍀`.
-- N-wise reduction `N f/X`.
-- Compress and expand with axis: `A/[k]B`, `A\B`, `A⍀B`.
-- Inner and outer product on any rank.
+`○ ! ? ⍲ ⍱` (T5); scan, axis, N-wise reduction, expand (T6).
 
 ## T7. Structural functions
 

@@ -1,16 +1,22 @@
 package apl
 
+// structFn is a structural primitive. dyadAxis, if set, takes an axis
+// k from 0; B is never a scalar there.
 type structFn struct {
-	monad func(e *env, x *Array) (*Array, error)
-	dyad  func(e *env, a, b *Array) (*Array, error)
+	monad    func(e *env, x *Array) (*Array, error)
+	dyad     func(e *env, a, b *Array) (*Array, error)
+	dyadAxis func(e *env, a, b *Array, k int) (*Array, error)
 }
 
 var structFns = map[string]*structFn{
-	"⍳": {monad: interval, dyad: indexOf},
-	"⍴": {monad: shapeOf, dyad: reshape},
-	",": {monad: ravel, dyad: catenate},
-	"/": {dyad: compress},
-	"?": {dyad: deal},
+	"⍳":  {monad: interval, dyad: indexOf},
+	"⍴":  {monad: shapeOf, dyad: reshape},
+	",":  {monad: ravel, dyad: catenate},
+	"/":  {dyadAxis: compress},
+	"⌿":  {dyadAxis: compress},
+	"\\": {dyadAxis: expand},
+	"⍀":  {dyadAxis: expand},
+	"?":  {dyad: deal},
 }
 
 // deal is A?B: A distinct random indices out of the first B.
@@ -232,41 +238,87 @@ func indexAssign(e *env, x *Array, idx []*Array, v *Array) (*Array, error) {
 	return General(x.Shape, r, x.Fill()), nil
 }
 
-// compress is A/B along the last axis; A gives a repeat count per item.
-func compress(_ *env, a, b *Array) (*Array, error) {
+// compress is A/[k]B: A gives a repeat count for each item along
+// axis k. A single count applies to every item, and a single item is
+// repeated to match A.
+func compress(_ *env, a, b *Array, k int) (*Array, error) {
 	if a.Rank() > 1 {
 		return nil, newError(RankError)
 	}
-	if b.IsScalar() {
-		b = &Array{Shape: []int{1}, Data: b.Data, Elems: b.Elems}
-	}
-	k := b.Rank() - 1
-	outer, n, _ := axisSplit(b.Shape, k)
 	counts, err := toInts(a)
 	if err != nil {
 		return nil, err
 	}
-	if len(counts) == 1 && n != 1 {
-		c := counts[0]
-		counts = make([]int, n)
-		for i := range counts {
-			counts[i] = c
+	outer, n, inner := axisSplit(b.Shape, k)
+	src := make([]int, 0, len(counts))
+	switch {
+	case len(counts) == 1:
+		for j := range n {
+			for range counts[0] {
+				src = append(src, j)
+			}
 		}
-	} else if len(counts) != n {
-		return nil, newError(LengthError)
-	}
-	total := 0
-	for _, c := range counts {
-		total += c
-	}
-	shape := append(append([]int(nil), b.Shape[:k]...), total)
-	pos := make([]int, 0, outer*total)
-	for i := range outer {
+	case n == 1 || len(counts) == n:
 		for j, c := range counts {
 			for range c {
-				pos = append(pos, i*n+j)
+				src = append(src, min(j, n-1))
+			}
+		}
+	default:
+		return nil, newError(LengthError)
+	}
+	return selectAxis(b, k, outer, n, inner, src), nil
+}
+
+// expand is A\[k]B: B's items along axis k go where A is 1, and fill
+// elements where A is 0. A single item of B is repeated.
+func expand(_ *env, a, b *Array, k int) (*Array, error) {
+	if a.Rank() > 1 {
+		return nil, newError(RankError)
+	}
+	bits, err := toInts(a)
+	if err != nil {
+		return nil, err
+	}
+	outer, n, inner := axisSplit(b.Shape, k)
+	ones := 0
+	for _, v := range bits {
+		if v > 1 {
+			return nil, newError(DomainError)
+		}
+		ones += v
+	}
+	if ones != n && n != 1 {
+		return nil, newError(LengthError)
+	}
+	src := make([]int, len(bits))
+	j := 0
+	for i, v := range bits {
+		src[i] = -1
+		if v == 1 {
+			src[i] = min(j, n-1)
+			j++
+		}
+	}
+	return selectAxis(b, k, outer, n, inner, src), nil
+}
+
+// selectAxis builds an array from b whose items along axis k are b's
+// items src (-1 for a fill item).
+func selectAxis(b *Array, k, outer, n, inner int, src []int) *Array {
+	shape := append([]int(nil), b.Shape...)
+	shape[k] = len(src)
+	pos := make([]int, 0, outer*len(src)*inner)
+	for i := range outer {
+		for _, j := range src {
+			for l := range inner {
+				if j < 0 {
+					pos = append(pos, -1)
+				} else {
+					pos = append(pos, (i*n+j)*inner+l)
+				}
 			}
 		}
 	}
-	return b.gather(shape, pos), nil
+	return b.gather(shape, pos)
 }

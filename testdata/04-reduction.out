@@ -87,10 +87,6 @@ DOMAIN ERROR
 DOMAIN ERROR
 ÷/1 0
 ^
-      2+/1 2 3
-SYNTAX ERROR
-2+/1 2 3
- ^
       ⍝ Only dyadic scalar functions can be reduced
       ~/1 0
 SYNTAX ERROR

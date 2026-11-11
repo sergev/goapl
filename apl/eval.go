@@ -84,10 +84,18 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 			r, err := in.call(n.fn.user, nil, x)
 			return r, setPos(err, n.fn.at)
 		}
-		r, err := in.monad(n.fn, x)
+		ax, err := in.evalAxis(n.fn)
+		if err != nil {
+			return nil, err
+		}
+		r, err := in.monad(n.fn, ax, x)
 		return r, setPos(err, n.fn.at)
 	case *dyadNode:
 		b, err := in.eval(n.right)
+		if err != nil {
+			return nil, err
+		}
+		ax, err := in.evalAxis(n.fn)
 		if err != nil {
 			return nil, err
 		}
@@ -99,7 +107,7 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 			r, err := in.call(n.fn.user, a, b)
 			return r, setPos(err, n.fn.at)
 		}
-		r, err := in.dyad(n.fn, a, b)
+		r, err := in.dyad(n.fn, ax, a, b)
 		return r, setPos(err, n.fn.at)
 	}
 	panic("eval: unknown node")
@@ -164,12 +172,53 @@ func setPos(err error, pos int) error {
 	return err
 }
 
-func (in *Interp) monad(f *fnNode, x *Array) (*Array, error) {
+// evalAxis evaluates the axis of f, or gives nil.
+func (in *Interp) evalAxis(f *fnNode) (*Array, error) {
+	if f.axis == nil {
+		return nil, nil
+	}
+	return in.eval(f.axis)
+}
+
+// axisIndex converts axis ax (from ⎕IO) of an array of rank r to an
+// index from 0; without ax it gives the first or the last axis.
+func (e *env) axisIndex(ax *Array, r int, first bool) (int, error) {
+	if ax == nil {
+		if first {
+			return 0, nil
+		}
+		return r - 1, nil
+	}
+	if ax.Size() != 1 || ax.Rank() > 1 || !ax.IsNumeric() {
+		return 0, newError(AxisError)
+	}
+	k, ok := toInt(ax.Data[0])
+	k -= e.io
+	if !ok || k < 0 || k >= r {
+		return 0, newError(AxisError)
+	}
+	return k, nil
+}
+
+func (in *Interp) monad(f *fnNode, ax, x *Array) (*Array, error) {
 	switch f.kind {
-	case fnReduce:
-		return reduce(&in.env, f.glyph, x)
+	case fnReduce, fnScan:
+		if x.IsScalar() && ax == nil {
+			return x, nil
+		}
+		k, err := in.axisIndex(ax, x.Rank(), f.first)
+		if err != nil {
+			return nil, err
+		}
+		if f.kind == fnScan {
+			return scanAxis(&in.env, f.glyph, x, k)
+		}
+		return reduceAxis(&in.env, f.glyph, x, k)
 	case fnInner, fnOuter:
 		return nil, newError(SyntaxError)
+	}
+	if ax != nil {
+		return nil, newError(AxisError)
 	}
 	sf, st := scalarFns[f.glyph], structFns[f.glyph]
 	switch {
@@ -183,14 +232,36 @@ func (in *Interp) monad(f *fnNode, x *Array) (*Array, error) {
 	return nil, newError(NonceError)
 }
 
-func (in *Interp) dyad(f *fnNode, a, b *Array) (*Array, error) {
+func (in *Interp) dyad(f *fnNode, ax, a, b *Array) (*Array, error) {
 	switch f.kind {
 	case fnReduce:
-		return nil, newError(SyntaxError)
+		if b.IsScalar() {
+			b = &Array{Shape: []int{1}, Data: b.Data, Elems: b.Elems}
+		}
+		k, err := in.axisIndex(ax, b.Rank(), f.first)
+		if err != nil {
+			return nil, err
+		}
+		return nwise(&in.env, f.glyph, a, b, k)
+	case fnScan:
+		return nil, newError(ValenceError)
 	case fnInner:
 		return inner(&in.env, f.glyph, f.g, a, b)
 	case fnOuter:
 		return outer(&in.env, scalarFns[f.glyph], a, b)
+	}
+	if st := structFns[f.glyph]; st != nil && st.dyadAxis != nil {
+		if b.IsScalar() {
+			b = &Array{Shape: []int{1}, Data: b.Data, Elems: b.Elems}
+		}
+		k, err := in.axisIndex(ax, b.Rank(), f.first)
+		if err != nil {
+			return nil, err
+		}
+		return st.dyadAxis(&in.env, a, b, k)
+	}
+	if ax != nil {
+		return nil, newError(AxisError)
 	}
 	sf, st := scalarFns[f.glyph], structFns[f.glyph]
 	switch {

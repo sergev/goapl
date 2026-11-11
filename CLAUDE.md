@@ -53,8 +53,10 @@ Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
   dispatch `⎕` names to `env`; a localized one keeps its value on entry.
 - **Primitives**: scalar (pervasive) functions are table-driven in
   `scalar.go` (`scalarFns`: glyph → monad/dyad); structural ones in
-  `structural.go` (`structFns`); reduce, inner and outer product in
-  `operators.go`. Operators accept only dyadic scalar functions.
+  `structural.go` (`structFns`); reduce, scan, inner and outer product in
+  `operators.go`. Operators accept only dyadic scalar functions. An axis
+  `[K]` is parsed into `fnNode.axis`; `axisIndex` resolves it, and
+  structural functions take it through `structFn.dyadAxis`.
 - **User functions**: `Interp.call` implements dynamic scoping by saving
   and restoring globals for args, result, `;locals` and labels; labels are
   local constants equal to their line number; `→` returns a target from

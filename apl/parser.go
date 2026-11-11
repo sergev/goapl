@@ -8,7 +8,9 @@ package apl
 //	         | ⍞ ← expr
 //	operand := (number | string | name | niladic | ⎕ | ⍞ | ( expr )) {[index]}
 //	index   := [expr] {; [expr]}
-//	fn      := prim | prim / | prim . prim | ∘ . prim | user function
+//	fn      := (prim | prim op) [axis] | prim . prim | ∘ . prim | user function
+//	op      := / | ⌿ | \ | ⍀
+//	axis    := [expr]
 
 type node interface{ pos() int }
 
@@ -76,7 +78,8 @@ type fnKind int
 
 const (
 	fnPrim   fnKind = iota // primitive function
-	fnReduce               // f/
+	fnReduce               // f/ or f⌿
+	fnScan                 // f\ or f⍀
 	fnInner                // f.g
 	fnOuter                // ∘.f
 	fnUser                 // user-defined function
@@ -86,6 +89,8 @@ type fnNode struct {
 	kind  fnKind
 	glyph string // f
 	g     string // g of inner product
+	first bool   // operator applies along the first axis: ⌿ ⍀
+	axis  node   // [k], or nil
 	user  *Function
 	at    int
 }
@@ -222,7 +227,7 @@ func (p *parser) expr() (node, error) {
 		if err != nil {
 			return nil, err
 		}
-		if f.kind == fnPrim && f.glyph == "/" {
+		if f.kind == fnPrim && isSlash(f.glyph) {
 			return nil, errorAt(SyntaxError, f.at)
 		}
 		if f.kind == fnUser && f.user.Arity() == 2 {
@@ -322,15 +327,37 @@ func (p *parser) fn() (*fnNode, error) {
 		p.i += 2
 		return &fnNode{kind: fnInner, glyph: t.Text, g: g.Text, at: t.Pos}, nil
 	}
-	if next, ok := p.peek(); ok && next.Kind == Prim && next.Text == "/" {
+	f := &fnNode{kind: fnPrim, glyph: t.Text, at: t.Pos}
+	if op, ok := p.peek(); ok && op.Kind == Prim && isSlash(op.Text) && !isSlash(t.Text) {
 		p.i++
 		if !isScalarDyad(t.Text) {
 			return nil, errorAt(SyntaxError, t.Pos)
 		}
-		return &fnNode{kind: fnReduce, glyph: t.Text, at: t.Pos}, nil
+		f.kind = fnReduce
+		if op.Text == "\\" || op.Text == "⍀" {
+			f.kind = fnScan
+		}
+		f.first = op.Text == "⌿" || op.Text == "⍀"
+	} else if isSlash(t.Text) {
+		f.first = t.Text == "⌿" || t.Text == "⍀"
 	}
-	return &fnNode{kind: fnPrim, glyph: t.Text, at: t.Pos}, nil
+	if b, ok := p.peek(); ok && isSpecial(b, "[") {
+		p.i++
+		idx, err := p.index()
+		if err != nil {
+			return nil, err
+		}
+		if len(idx) != 1 || idx[0] == nil {
+			return nil, errorAt(AxisError, b.Pos)
+		}
+		f.axis = idx[0]
+	}
+	return f, nil
 }
+
+// isSlash reports whether g is one of the operators / ⌿ \ ⍀, which are
+// also the functions compress and expand.
+func isSlash(g string) bool { return g == "/" || g == "⌿" || g == "\\" || g == "⍀" }
 
 func (p *parser) operand() (node, error) {
 	n, err := p.primary()

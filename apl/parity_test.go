@@ -104,7 +104,6 @@ func parityCases() []parityCase {
 		{name: "charset_only_NorthCap", lines: []string{"1∪2"}, class: SyntaxError},
 		{name: "charset_only_ibeam", lines: []string{"1⊥2"}, class: NonceError},
 		{name: "charset_only_TBeam", lines: []string{"1⊤2"}, class: NonceError},
-		{name: "charset_only_BackwardSlash", lines: []string{`1\2`}, class: NonceError},
 		{name: "charset_only_LeftBracket", lines: []string{"1[2]"}, class: RankError},
 
 		// Deliberate differences from the prototype.
@@ -112,6 +111,8 @@ func parityCases() []parityCase {
 		// numbered messages. Unimplemented glyphs give NONCE ERROR.
 		// ○/ was log to base; ○ is the circular functions.
 		{name: "differs_reduce_circle", lines: []string{"○/2 8"}, want: "¯0.1455000338"},
+		// 1\2 was an error; \ is expand.
+		{name: "differs_BackwardSlash", lines: []string{`1\2`}, want: "2"},
 		// 1?2 was an error; ? is deal.
 		{name: "differs_QuestionMark", lines: []string{"1?2"}, want: "1"},
 		// Reducing a scalar, one item or an empty axis were errors.

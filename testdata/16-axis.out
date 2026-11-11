@@ -1,0 +1,221 @@
+      ⍝ Scan: item I is the reduction of the first I items
+      +\1 2 3 4 5
+1 3 6 10 15
+      ×\1 2 3 4 5
+1 2 6 24 120
+      ⌈\3 1 4 1 5
+3 3 4 4 5
+      -\1 2 3 4
+1 ¯1 2 ¯2
+      ÷\1 2 3
+1 0.5 1.5
+      ∧\1 1 0 1
+1 1 0 0
+      ∨\0 0 1 0
+0 0 1 1
+      ≠\0 1 1 0
+0 1 0 0
+      +\5
+5
+      +\⍳0
+
+      ⍴+\⍳0
+0
+      +\2 3⍴⍳6
+1 3  6
+4 9 15
+      ⍝ Reduce and scan along an axis; ⌿ and ⍀ use the first axis
+      M←2 3⍴⍳6
+      +/[1]M
+5 7 9
+      +/[2]M
+6 15
+      +⌿M
+5 7 9
+      +\[1]M
+1 2 3
+5 7 9
+      +⍀M
+1 2 3
+5 7 9
+      -⌿3 1⍴10 3 2
+9
+      A←2 3 4⍴⍳24
+      +/[2]A
+15 18 21 24
+51 54 57 60
+      +⌿A
+14 16 18 20
+22 24 26 28
+30 32 34 36
+      ⍴+/[1]A
+3 4
+      ⍴+/[2]A
+2 4
+      ⍴+/[3]A
+2 3
+      ⍝ Axis numbers follow ⎕IO
+      ⎕IO←0
+      +/[0]M
+5 7 9
+      ⎕IO←1
+      ⍝ The axis may be any expression
+      +/[⍴⍴M]M
+6 15
+      ⍝ Reducing an empty axis gives the identity element
+      +⌿0 3⍴0
+0 0 0
+      ×/[1]0 2⍴0
+1 1
+      ⍝ N-wise reduction: f/ over each window of N items
+      2+/1 2 3 4 5
+3 5 7 9
+      3+/1 2 3 4 5
+6 9 12
+      5+/1 2 3 4 5
+15
+      6+/1 2 3 4 5
+
+      0+/1 2 3
+0 0 0 0
+      2-/1 4 9 16
+¯3 ¯5 ¯7
+      ¯2-/1 4 9 16
+3 5 7
+      2+/2 3⍴⍳6
+3  5
+9 11
+      2+/[1]3 2⍴⍳6
+4  6
+8 10
+      2+⌿3 2⍴⍳6
+4  6
+8 10
+      ⍝ Compress along an axis; ⌿ uses the first axis
+      1 0 1/M
+1 3
+4 6
+      1 0/[1]M
+1 2 3
+      0 1⌿M
+4 5 6
+      1 0 1/[2]M
+1 3
+4 6
+      2 0 1/[2]M
+1 1 3
+4 4 6
+      ⍝ A single number or a single item extends
+      2/1 2 3
+1 1 2 2 3 3
+      1 0 1/5
+5 5
+      1 1 0⌿1 3⍴7 8 9
+7 8 9
+7 8 9
+      ⍝ Expand: zeros insert fill items
+      1 0 1 1 0\1 2 3
+1 0 2 3 0
+      1 0 1\'AB'
+A B
+      1 0 1\5
+5 0 5
+      1 0 1 1\M
+1 0 2 3
+4 0 5 6
+      1 0 1⍀M
+1 2 3
+0 0 0
+4 5 6
+      1 0 1\[1]M
+1 2 3
+0 0 0
+4 5 6
+      0 0\⍳0
+0 0
+      ⍴0 0⍀0 3⍴0
+2 3
+      ⍝ Inner and outer product on any rank
+      ⍴(2 3 4⍴1)+.×4 5⍴1
+2 3 5
+      (2 2 2⍴⍳8)+.×2 2⍴1 0 0 1
+1 2
+3 4
+
+5 6
+7 8
+      ⍴(2 2⍴1)∘.×2 2 2⍴1
+2 2 2 2 2
+      ⍝ Errors
+      2+\1 2
+VALENCE ERROR
+2+\1 2
+ ^
+      +/[3]M
+AXIS ERROR
++/[3]M
+^
+      +/[0]M
+AXIS ERROR
++/[0]M
+^
+      +/[1.5]M
+AXIS ERROR
++/[1.5]M
+^
+      +/[1 2]M
+AXIS ERROR
++/[1 2]M
+^
+      +/['A']M
+AXIS ERROR
++/['A']M
+^
+      +/[]M
+AXIS ERROR
++/[]M
+  ^
+      +[1]M
+AXIS ERROR
++[1]M
+^
+      ⍳[1]3
+AXIS ERROR
+⍳[1]3
+^
+      1 0/[3]M
+AXIS ERROR
+1 0/[3]M
+   ^
+      1 0 1\[3]M
+AXIS ERROR
+1 0 1\[3]M
+     ^
+      1 2\1 2
+DOMAIN ERROR
+1 2\1 2
+   ^
+      1 0 0\1 2
+LENGTH ERROR
+1 0 0\1 2
+     ^
+      1 0 1\1 2 3
+LENGTH ERROR
+1 0 1\1 2 3
+     ^
+      1 0/1 2 3
+LENGTH ERROR
+1 0/1 2 3
+   ^
+      4+/1 2
+LENGTH ERROR
+4+/1 2
+ ^
+      1.5+/1 2
+DOMAIN ERROR
+1.5+/1 2
+   ^
+      1 2+/1 2
+LENGTH ERROR
+1 2+/1 2
+   ^

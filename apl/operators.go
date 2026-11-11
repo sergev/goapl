@@ -53,6 +53,98 @@ func reduceAxis(e *env, glyph string, x *Array, k int) (*Array, error) {
 	return General(shape, r, x.Fill()), nil
 }
 
+// associative functions can be scanned in one pass.
+var associative = map[string]bool{"+": true, "×": true, "⌈": true, "⌊": true, "∧": true, "∨": true}
+
+// scanAxis is f\[k]X: item j is the reduction of items 0 to j.
+func scanAxis(e *env, glyph string, x *Array, k int) (*Array, error) {
+	sf := scalarFns[glyph]
+	outer, n, inner := axisSplit(x.Shape, k)
+	r := make([]Value, x.Size())
+	for i := range outer {
+		for l := range inner {
+			at := func(j int) int { return (i*n+j)*inner + l }
+			for j := range n {
+				if j == 0 {
+					r[at(0)] = x.At(at(0))
+					continue
+				}
+				if associative[glyph] {
+					v, err := sf.elem(e, r[at(j-1)], x.At(at(j)))
+					if err != nil {
+						return nil, err
+					}
+					r[at(j)] = v
+					continue
+				}
+				acc := x.At(at(j))
+				for m := j - 1; m >= 0; m-- {
+					v, err := sf.elem(e, x.At(at(m)), acc)
+					if err != nil {
+						return nil, err
+					}
+					acc = v
+				}
+				r[at(j)] = acc
+			}
+		}
+	}
+	return General(x.Shape, r, x.Fill()), nil
+}
+
+// nwise is N f/[k]X: f/ over each window of |N| items along axis k;
+// a negative N reverses the windows.
+func nwise(e *env, glyph string, a, x *Array, k int) (*Array, error) {
+	if a.Size() != 1 || a.Rank() > 1 {
+		return nil, newError(LengthError)
+	}
+	d, err := a.numeric()
+	if err != nil {
+		return nil, err
+	}
+	w, ok := toInt(d[0])
+	if !ok {
+		return nil, newError(DomainError)
+	}
+	rev := w < 0
+	if rev {
+		w = -w
+	}
+	outer, n, inner := axisSplit(x.Shape, k)
+	if w > n+1 {
+		return nil, newError(LengthError)
+	}
+	shape := append([]int(nil), x.Shape...)
+	shape[k] = n - w + 1
+	if w == 0 {
+		return identityArray(glyph, shape)
+	}
+	sf := scalarFns[glyph]
+	r := make([]Value, 0, shapeSize(shape))
+	for i := range outer {
+		for j := range n - w + 1 {
+			for l := range inner {
+				at := func(m int) Value {
+					if rev {
+						m = w - 1 - m
+					}
+					return x.At((i*n+j+m)*inner + l)
+				}
+				acc := at(w - 1)
+				for m := w - 2; m >= 0; m-- {
+					v, err := sf.elem(e, at(m), acc)
+					if err != nil {
+						return nil, err
+					}
+					acc = v
+				}
+				r = append(r, acc)
+			}
+		}
+	}
+	return General(shape, r, x.Fill()), nil
+}
+
 // identityArray is an array of f's identity element, or DOMAIN ERROR.
 func identityArray(glyph string, shape []int) (*Array, error) {
 	id, ok := identity[glyph]

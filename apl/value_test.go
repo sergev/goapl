@@ -112,11 +112,11 @@ func TestGeneralStructural(t *testing.T) {
 	if !r.IsNumeric() {
 		t.Errorf("all-numeric result is general")
 	}
-	r, err = compress(e, Vector([]float64{1, 0, 2}), abc)
+	r, err = compress(e, Vector([]float64{1, 0, 2}), abc, 0)
 	check("1 0 2/'abc'", r, err, "acc")
-	r, err = compress(e, Scalar(2), abc.gather(nil, []int{0}))
+	r, err = compress(e, Scalar(2), abc.gather([]int{1}, []int{0}), 0)
 	check("2/'a'", r, err, "aa")
-	r, err = compress(e, Scalar(1), Vector(nil))
+	r, err = compress(e, Scalar(1), Vector(nil), 0)
 	check("1/⍳0", r, err, "")
 	r, err = indexOf(e, abc, Chars("cz"))
 	check("'abc'⍳'cz'", r, err, "3 4")
