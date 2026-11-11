@@ -6,11 +6,12 @@ import (
 	"strings"
 )
 
-// PrintPrecision is the number of significant digits shown (⎕PP).
-const PrintPrecision = 10
+// FormatNumber renders a number in APL notation with the default ⎕PP.
+func FormatNumber(v float64) string { return formatNumber(v, defaultPP) }
 
-// FormatNumber renders a number in APL notation: ¯ for minus, E for exponent.
-func FormatNumber(v float64) string {
+// formatNumber renders a number with pp significant digits: ¯ for
+// minus, E for exponent.
+func formatNumber(v float64, pp int) string {
 	if v == 0 {
 		return "0"
 	}
@@ -20,7 +21,7 @@ func FormatNumber(v float64) string {
 		}
 		return "∞"
 	}
-	s := strconv.FormatFloat(v, 'g', PrintPrecision, 64)
+	s := strconv.FormatFloat(v, 'g', pp, 64)
 	if i := strings.IndexByte(s, 'e'); i >= 0 {
 		mant, exp := s[:i], s[i+1:]
 		neg := exp[0] == '-'
@@ -34,30 +35,33 @@ func FormatNumber(v float64) string {
 }
 
 // formatElem renders one element.
-func formatElem(v Value) string {
+func formatElem(v Value, pp int) string {
 	switch v := v.(type) {
 	case float64:
-		return FormatNumber(v)
+		return formatNumber(v, pp)
 	case Char:
 		return string(rune(v))
 	case *Array:
-		return Format(v)
+		return format(v, pp)
 	}
 	return "?"
 }
 
-// Format renders an array as display lines. Rows of a matrix are
-// lines; each axis before the last two separates its planes by one
-// more blank line.
-func Format(a *Array) string {
+// Format renders an array with the default ⎕PP.
+func Format(a *Array) string { return format(a, defaultPP) }
+
+// format renders an array as display lines with pp significant digits.
+// Rows of a matrix are lines; each axis before the last two separates
+// its planes by one more blank line.
+func format(a *Array, pp int) string {
 	r := a.Rank()
 	switch r {
 	case 0:
-		return formatElem(a.At(0))
+		return formatElem(a.At(0), pp)
 	case 1:
 		s := make([]string, a.Size())
 		for i := range s {
-			s[i] = formatElem(a.At(i))
+			s[i] = formatElem(a.At(i), pp)
 		}
 		return strings.Join(s, " ")
 	}
@@ -66,7 +70,7 @@ func Format(a *Array) string {
 	cells := make([]string, a.Size())
 	width := make([]int, cols)
 	for i := range cells {
-		cells[i] = formatElem(a.At(i))
+		cells[i] = formatElem(a.At(i), pp)
 		width[i%cols] = max(width[i%cols], len([]rune(cells[i])))
 	}
 	var b strings.Builder

@@ -29,7 +29,7 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 	case *constNode:
 		return n.val, nil
 	case *varNode:
-		v, ok := in.vars[n.name]
+		v, ok := in.getVar(n.name)
 		if !ok {
 			return nil, errorAt(ValueError, n.at)
 		}
@@ -39,8 +39,7 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 		if err != nil {
 			return nil, err
 		}
-		in.vars[n.name] = v
-		return v, nil
+		return v, setPos(in.setVar(n.name, v), n.at)
 	case *indexNode:
 		idx, err := in.evalIndex(n.idx)
 		if err != nil {
@@ -50,7 +49,7 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 		if err != nil {
 			return nil, err
 		}
-		r, err := index(x, idx)
+		r, err := index(&in.env, x, idx)
 		return r, setPos(err, n.at)
 	case *indexAssignNode:
 		v, err := in.eval(n.right)
@@ -61,16 +60,15 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 		if err != nil {
 			return nil, err
 		}
-		x, ok := in.vars[n.name]
+		x, ok := in.getVar(n.name)
 		if !ok {
 			return nil, errorAt(ValueError, n.at)
 		}
-		r, err := indexAssign(x, idx, v)
-		if err != nil {
-			return nil, setPos(err, n.at)
+		r, err := indexAssign(&in.env, x, idx, v)
+		if err == nil {
+			err = in.setVar(n.name, r)
 		}
-		in.vars[n.name] = r
-		return v, nil
+		return v, setPos(err, n.at)
 	case *monadNode:
 		x, err := in.eval(n.right)
 		if err != nil {
@@ -80,7 +78,7 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 			r, err := in.call(n.fn.user, nil, x)
 			return r, setPos(err, n.fn.at)
 		}
-		r, err := monad(n.fn, x)
+		r, err := in.monad(n.fn, x)
 		return r, setPos(err, n.fn.at)
 	case *dyadNode:
 		b, err := in.eval(n.right)
@@ -95,7 +93,7 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 			r, err := in.call(n.fn.user, a, b)
 			return r, setPos(err, n.fn.at)
 		}
-		r, err := dyad(n.fn, a, b)
+		r, err := in.dyad(n.fn, a, b)
 		return r, setPos(err, n.fn.at)
 	}
 	panic("eval: unknown node")
@@ -160,10 +158,10 @@ func setPos(err error, pos int) error {
 	return err
 }
 
-func monad(f *fnNode, x *Array) (*Array, error) {
+func (in *Interp) monad(f *fnNode, x *Array) (*Array, error) {
 	switch f.kind {
 	case fnReduce:
-		return reduce(f.glyph, x)
+		return reduce(&in.env, f.glyph, x)
 	case fnInner, fnOuter:
 		return nil, newError(SyntaxError)
 	}
@@ -171,37 +169,37 @@ func monad(f *fnNode, x *Array) (*Array, error) {
 		if sf.monad == nil {
 			return nil, newError(ValenceError)
 		}
-		return applyMonad(sf.monad, x)
+		return applyMonad(&in.env, sf.monad, x)
 	}
 	if sf := structFns[f.glyph]; sf != nil {
 		if sf.monad == nil {
 			return nil, newError(ValenceError)
 		}
-		return sf.monad(x)
+		return sf.monad(&in.env, x)
 	}
 	return nil, newError(NonceError)
 }
 
-func dyad(f *fnNode, a, b *Array) (*Array, error) {
+func (in *Interp) dyad(f *fnNode, a, b *Array) (*Array, error) {
 	switch f.kind {
 	case fnReduce:
 		return nil, newError(SyntaxError)
 	case fnInner:
-		return inner(f.glyph, f.g, a, b)
+		return inner(&in.env, f.glyph, f.g, a, b)
 	case fnOuter:
-		return outer(scalarFns[f.glyph].dyad, a, b)
+		return outer(&in.env, scalarFns[f.glyph].dyad, a, b)
 	}
 	if sf := scalarFns[f.glyph]; sf != nil {
 		if sf.dyad == nil {
 			return nil, newError(ValenceError)
 		}
-		return applyDyad(sf.dyad, a, b)
+		return applyDyad(&in.env, sf.dyad, a, b)
 	}
 	if sf := structFns[f.glyph]; sf != nil {
 		if sf.dyad == nil {
 			return nil, newError(ValenceError)
 		}
-		return sf.dyad(a, b)
+		return sf.dyad(&in.env, a, b)
 	}
 	return nil, newError(NonceError)
 }

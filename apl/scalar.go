@@ -2,11 +2,8 @@ package apl
 
 import "math"
 
-// Comparison tolerance (⎕CT).
-const compTol = 1e-13
-
-type monadFn func(x float64) (float64, error)
-type dyadFn func(a, b float64) (float64, error)
+type monadFn func(e *env, x float64) (float64, error)
+type dyadFn func(e *env, a, b float64) (float64, error)
 
 // scalarFn is a pervasive primitive; nil entries mean no such valence.
 type scalarFn struct {
@@ -16,25 +13,25 @@ type scalarFn struct {
 
 var scalarFns = map[string]*scalarFn{
 	"+": {
-		monad: func(x float64) (float64, error) { return x, nil },
-		dyad:  func(a, b float64) (float64, error) { return a + b, nil },
+		monad: func(_ *env, x float64) (float64, error) { return x, nil },
+		dyad:  func(_ *env, a, b float64) (float64, error) { return a + b, nil },
 	},
 	"-": {
-		monad: func(x float64) (float64, error) { return -x, nil },
-		dyad:  func(a, b float64) (float64, error) { return a - b, nil },
+		monad: func(_ *env, x float64) (float64, error) { return -x, nil },
+		dyad:  func(_ *env, a, b float64) (float64, error) { return a - b, nil },
 	},
 	"×": {
 		monad: signum,
-		dyad:  func(a, b float64) (float64, error) { return a * b, nil },
+		dyad:  func(_ *env, a, b float64) (float64, error) { return a * b, nil },
 	},
 	"÷": {
-		monad: func(x float64) (float64, error) {
+		monad: func(_ *env, x float64) (float64, error) {
 			if x == 0 {
 				return 0, newError(DomainError)
 			}
 			return 1 / x, nil
 		},
-		dyad: func(a, b float64) (float64, error) {
+		dyad: func(_ *env, a, b float64) (float64, error) {
 			if b == 0 {
 				if a == 0 {
 					return 1, nil
@@ -45,11 +42,11 @@ var scalarFns = map[string]*scalarFn{
 		},
 	},
 	"*": {
-		monad: func(x float64) (float64, error) { return math.Exp(x), nil },
+		monad: func(_ *env, x float64) (float64, error) { return math.Exp(x), nil },
 		dyad:  power,
 	},
 	"~": {
-		monad: func(x float64) (float64, error) {
+		monad: func(_ *env, x float64) (float64, error) {
 			if !isBool(x) {
 				return 0, newError(DomainError)
 			}
@@ -57,19 +54,19 @@ var scalarFns = map[string]*scalarFn{
 		},
 	},
 	"⌈": {
-		monad: func(x float64) (float64, error) { return math.Ceil(x), nil },
-		dyad:  func(a, b float64) (float64, error) { return math.Max(a, b), nil },
+		monad: func(e *env, x float64) (float64, error) { return -floor(-x, e.ct), nil },
+		dyad:  func(_ *env, a, b float64) (float64, error) { return math.Max(a, b), nil },
 	},
 	"⌊": {
-		monad: func(x float64) (float64, error) { return math.Floor(x), nil },
-		dyad:  func(a, b float64) (float64, error) { return math.Min(a, b), nil },
+		monad: func(e *env, x float64) (float64, error) { return floor(x, e.ct), nil },
+		dyad:  func(_ *env, a, b float64) (float64, error) { return math.Min(a, b), nil },
 	},
 	"|": {
-		monad: func(x float64) (float64, error) { return math.Abs(x), nil },
+		monad: func(_ *env, x float64) (float64, error) { return math.Abs(x), nil },
 		dyad:  residue,
 	},
 	"⍟": {
-		monad: func(x float64) (float64, error) {
+		monad: func(_ *env, x float64) (float64, error) {
 			if x <= 0 {
 				return 0, newError(DomainError)
 			}
@@ -77,12 +74,12 @@ var scalarFns = map[string]*scalarFn{
 		},
 		dyad: logBase,
 	},
-	"=": {dyad: compare(func(a, b float64) bool { return tolEq(a, b) })},
-	"≠": {dyad: compare(func(a, b float64) bool { return !tolEq(a, b) })},
-	"<": {dyad: compare(func(a, b float64) bool { return a < b && !tolEq(a, b) })},
-	"≤": {dyad: compare(func(a, b float64) bool { return a < b || tolEq(a, b) })},
-	"≥": {dyad: compare(func(a, b float64) bool { return a > b || tolEq(a, b) })},
-	">": {dyad: compare(func(a, b float64) bool { return a > b && !tolEq(a, b) })},
+	"=": {dyad: compare(func(a, b, ct float64) bool { return tolEq(a, b, ct) })},
+	"≠": {dyad: compare(func(a, b, ct float64) bool { return !tolEq(a, b, ct) })},
+	"<": {dyad: compare(func(a, b, ct float64) bool { return a < b && !tolEq(a, b, ct) })},
+	"≤": {dyad: compare(func(a, b, ct float64) bool { return a < b || tolEq(a, b, ct) })},
+	"≥": {dyad: compare(func(a, b, ct float64) bool { return a > b || tolEq(a, b, ct) })},
+	">": {dyad: compare(func(a, b, ct float64) bool { return a > b && !tolEq(a, b, ct) })},
 	"∧": {dyad: logical(func(a, b bool) bool { return a && b })},
 	"∨": {dyad: logical(func(a, b bool) bool { return a || b })},
 }
@@ -94,7 +91,7 @@ var identity = map[string]float64{
 	"=": 1, "≠": 0, "<": 0, "≤": 1, "≥": 1, ">": 0, "∧": 1, "∨": 0,
 }
 
-func signum(x float64) (float64, error) {
+func signum(_ *env, x float64) (float64, error) {
 	switch {
 	case x > 0:
 		return 1, nil
@@ -104,7 +101,7 @@ func signum(x float64) (float64, error) {
 	return 0, nil
 }
 
-func power(a, b float64) (float64, error) {
+func power(_ *env, a, b float64) (float64, error) {
 	r := math.Pow(a, b)
 	if math.IsNaN(r) {
 		return 0, newError(DomainError)
@@ -115,10 +112,24 @@ func power(a, b float64) (float64, error) {
 	return r, nil
 }
 
-// residue is A|B: B modulo A with the sign of A.
-func residue(a, b float64) (float64, error) {
+// floor is the tolerant floor: x rounds up to an integer within
+// relative tolerance ct.
+func floor(x, ct float64) float64 {
+	n := math.Round(x)
+	if n > x && n-x > ct*math.Max(1, math.Abs(x)) {
+		n--
+	}
+	return n
+}
+
+// residue is A|B: B modulo A with the sign of A; 0 if B÷A is a
+// near-integer.
+func residue(e *env, a, b float64) (float64, error) {
 	if a == 0 {
 		return b, nil
+	}
+	if q := b / a; tolEq(q, math.Round(q), e.ct) {
+		return 0, nil
 	}
 	r := math.Mod(b, a)
 	if r != 0 && (r < 0) != (a < 0) {
@@ -128,7 +139,7 @@ func residue(a, b float64) (float64, error) {
 }
 
 // logBase is A⍟B: log of B to base A.
-func logBase(a, b float64) (float64, error) {
+func logBase(_ *env, a, b float64) (float64, error) {
 	if a*b < 0 {
 		return 0, newError(DomainError)
 	}
@@ -139,12 +150,12 @@ func logBase(a, b float64) (float64, error) {
 	return math.Log(math.Abs(b)) / la, nil
 }
 
-func compare(f func(a, b float64) bool) dyadFn {
-	return func(a, b float64) (float64, error) { return boolVal(f(a, b)), nil }
+func compare(f func(a, b, ct float64) bool) dyadFn {
+	return func(e *env, a, b float64) (float64, error) { return boolVal(f(a, b, e.ct)), nil }
 }
 
 func logical(f func(a, b bool) bool) dyadFn {
-	return func(a, b float64) (float64, error) {
+	return func(_ *env, a, b float64) (float64, error) {
 		if !isBool(a) || !isBool(b) {
 			return 0, newError(DomainError)
 		}
@@ -152,11 +163,12 @@ func logical(f func(a, b bool) bool) dyadFn {
 	}
 }
 
-func tolEq(a, b float64) bool {
+// tolEq is tolerant equality with relative tolerance ct.
+func tolEq(a, b, ct float64) bool {
 	if a == b {
 		return true
 	}
-	return math.Abs(a-b) <= compTol*math.Max(math.Abs(a), math.Abs(b))
+	return math.Abs(a-b) <= ct*math.Max(math.Abs(a), math.Abs(b))
 }
 
 func isBool(x float64) bool { return x == 0 || x == 1 }
@@ -169,14 +181,14 @@ func boolVal(b bool) float64 {
 }
 
 // applyMonad applies f to every element.
-func applyMonad(f monadFn, x *Array) (*Array, error) {
+func applyMonad(e *env, f monadFn, x *Array) (*Array, error) {
 	d, err := x.numeric()
 	if err != nil {
 		return nil, err
 	}
 	r := &Array{Shape: x.Shape, Data: make([]float64, len(d))}
 	for i, v := range d {
-		y, err := f(v)
+		y, err := f(e, v)
 		if err != nil {
 			return nil, err
 		}
@@ -186,7 +198,7 @@ func applyMonad(f monadFn, x *Array) (*Array, error) {
 }
 
 // applyDyad applies f elementwise with scalar (or one-element) extension.
-func applyDyad(f dyadFn, a, b *Array) (*Array, error) {
+func applyDyad(e *env, f dyadFn, a, b *Array) (*Array, error) {
 	if !a.IsNumeric() || !b.IsNumeric() {
 		return nil, newError(DomainError)
 	}
@@ -214,7 +226,7 @@ func applyDyad(f dyadFn, a, b *Array) (*Array, error) {
 		if b.Size() > 1 {
 			y = b.Data[i]
 		}
-		v, err := f(x, y)
+		v, err := f(e, x, y)
 		if err != nil {
 			return nil, err
 		}

@@ -55,11 +55,12 @@ session, as in the original.
 | Operators | `f/` reduction (scalars, one element and empty axes as in APL2), `f.g` inner product, `∘.f` outer product |
 | Added     | `⌈ ⌊` ceiling/floor, max/min; `\|` magnitude/residue; `⍟` natural log, log to base; `A/B` compress |
 | Other     | `←` assignment, `A[I;J]` indexing and indexed assignment, `⎕` input/output, `→` branch, labels |
+| System    | `⎕IO` index origin, `⎕CT` comparison tolerance, `⎕PP` print precision, `⎕RL` random link; localizable in headers |
 | Functions | `∇` definitions: niladic, monadic, dyadic, with or without explicit result |
 
 Data are floating-point arrays of any rank. Errors are reported by
 APL2 class (`DOMAIN ERROR`, `LENGTH ERROR`, ...). `⍝` starts a comment.
-Comparisons use a tolerance of 1E¯13.
+Comparisons use a tolerance of 1E¯13 (`⎕CT`).
 Indexing is more general than in the original: indices may be arrays
 (`V[2 4]`, `M[1 3;]`) and an axis may be elided (`M[;2]`); the original
 accepted scalar indices only. Output uses conventional APL notation (10 significant digits, `¯` for
@@ -106,7 +107,7 @@ R←R×I
 `make test` runs unit tests and golden tests. Each `testdata/*.apl` script
 covers one area of the language (lexical rules, monadic and dyadic
 functions, reduction, structural functions, products, indexing, syntax,
-user functions, `⎕`, output format, edge cases), with `⍝` comments saying
+user functions, `⎕`, output format, edge cases, system variables), with `⍝` comments saying
 what each group checks. It is run as an interactive session, and the
 transcript (input after the prompt, then output) is compared with the
 matching `.out` file.

@@ -1,0 +1,171 @@
+      ⍝ Defaults
+      ⎕IO
+1
+      ⎕CT
+1E¯13
+      ⎕PP
+10
+      ⎕RL
+16807
+      ⍝ ⎕IO: index origin of ⍳, dyadic ⍳ and indexing
+      ⎕IO←0
+      ⍳5
+0 1 2 3 4
+      10 20 30⍳30 40
+2 3
+      V←10 20 30
+      V[0]
+10
+      V[2]←99
+      V
+10 20 99
+      M←2 3⍴⍳6
+      M[1;0 2]
+3 5
+      V[3]
+INDEX ERROR
+V[3]
+ ^
+      ⎕IO←1
+      ⍳5
+1 2 3 4 5
+      V[3]
+99
+      ⍝ ⎕CT: comparison tolerance
+      1=1+1E¯10
+0
+      ⎕CT←1E¯9
+      1=1+1E¯10
+1
+      1 2 3⍳2.0000000001
+2
+      ⎕CT←0
+      1=1+1E¯15
+0
+      ⎕CT←1E¯13
+      ⍝ Floor, ceiling and residue are tolerant
+      ⌊2.99999999999999
+3
+      ⌈3.00000000000001
+3
+      ⌊2.9
+2
+      0.1|0.3
+0
+      ⍝ ⎕PP: significant digits shown
+      ÷3
+0.3333333333
+      ⎕PP←4
+      ÷3
+0.3333
+      2*40
+1.1E12
+      ⎕PP←17
+      ÷3
+0.33333333333333331
+      ⍝ Values above 17 are taken as 17
+      ⎕PP←30
+      ⎕PP
+17
+      ⎕PP←10
+      ⍝ ⎕RL: random link, the seed of ?
+      ⎕RL←42
+      ⎕RL
+42
+      ⍝ A one-element vector may be assigned
+      ⎕IO←,0
+      ⎕IO
+0
+      ⎕IO←1
+      ⍝ Localized in a function header; the global value is kept outside
+      ∇R←F X;⎕IO
+[1] ⎕IO←0
+[2] R←⍳X
+[3] ∇
+      F 3
+0 1 2
+      ⎕IO
+1
+      ⍝ A localized system variable starts with the global value
+      ∇G;⎕PP
+[1] ⎕←⎕PP
+[2] ⎕PP←3
+[3] ⎕←÷3
+[4] ∇
+      G
+10
+0.333
+      ÷3
+0.3333333333
+      ⍝ Branch targets and labels stay 1-based
+      ∇R←H N;⎕IO
+[1] ⎕IO←0
+[2] R←0
+[3] L:R←R+1
+[4] →(R<N)/L
+[5] ∇
+      H 4
+4
+      ⍝ Errors
+      ⎕IO←2
+DOMAIN ERROR
+⎕IO←2
+^
+      ⎕IO←0.5
+DOMAIN ERROR
+⎕IO←0.5
+^
+      ⎕IO←0 1
+LENGTH ERROR
+⎕IO←0 1
+^
+      ⎕CT←1
+DOMAIN ERROR
+⎕CT←1
+^
+      ⎕CT←¯1
+DOMAIN ERROR
+⎕CT←¯1
+^
+      ⎕PP←0
+DOMAIN ERROR
+⎕PP←0
+^
+      ⎕PP←1.5
+DOMAIN ERROR
+⎕PP←1.5
+^
+      ⎕RL←0
+DOMAIN ERROR
+⎕RL←0
+^
+      ⎕RL←2*31
+DOMAIN ERROR
+⎕RL←2*31
+^
+      ⎕XY
+SYNTAX ERROR
+⎕XY
+^
+      ⎕XY←1
+SYNTAX ERROR
+⎕XY←1
+^
+      ⍝ System variables cannot be function or argument names
+      ∇⎕IO
+DEFN ERROR
+∇⎕IO
+ ^
+      ∇R←F ⎕IO
+DEFN ERROR
+∇R←F ⎕IO
+     ^
+      ∇R←⎕CT F X
+DEFN ERROR
+∇R←⎕CT F X
+   ^
+      ⍝ Only known system variables can be localized
+      ∇K;⎕XY
+DEFN ERROR
+∇K;⎕XY
+   ^

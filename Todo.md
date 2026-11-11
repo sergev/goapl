@@ -7,13 +7,8 @@ one), README updates, and `make test` and `make compare` passing.
 
 Already done: `⍝` comments; `⌈ ⌊ | ⍟` monadic and dyadic; compress `A/B`;
 APL2 error classes and behavior where the original differs (T1);
-arrays of any rank with general (character, mixed, nested) elements (T2).
-
-## T3. System variables
-
-`⎕IO` (index origin; affects `⍳`, indexing, `⍋`, axis numbers, branch
-targets stay 1-based), `⎕CT`, `⎕PP`, `⎕RL` (random seed). Assignment
-and localization in function headers.
+arrays of any rank with general (character, mixed, nested) elements (T2);
+`⎕IO ⎕CT ⎕PP ⎕RL` (T3).
 
 ## T4. Characters
 

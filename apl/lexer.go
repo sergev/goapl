@@ -80,8 +80,9 @@ func Lex(line string) ([]Token, error) {
 				break
 			}
 			toks = append(toks, Token{Kind: Number, Pos: start, Nums: nums})
-		case isLetter(c):
+		case isLetter(c) || c == '⎕' && i+1 < len(src) && isLetter(src[i+1]):
 			start := i
+			i++
 			for i < len(src) && (isLetter(src[i]) || isDigit(src[i])) {
 				i++
 			}

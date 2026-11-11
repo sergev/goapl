@@ -47,6 +47,9 @@ Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
   names (variable vs niladic/monadic/dyadic user function), so user
   function bodies are lexed at definition but parsed at run time and cached
   per statement, invalidated by `Interp.fnGen`.
+- **System variables** (`sysvar.go`): `⎕IO ⎕CT ⎕PP ⎕RL` live in `env`,
+  embedded in `Interp`; primitives take `e *env`. `getVar`/`setVar`
+  dispatch `⎕` names to `env`; a localized one keeps its value on entry.
 - **Primitives**: scalar (pervasive) functions are table-driven in
   `scalar.go` (`scalarFns`: glyph → monad/dyad); structural ones in
   `structural.go` (`structFns`); reduce, inner and outer product in

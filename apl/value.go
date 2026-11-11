@@ -170,13 +170,13 @@ func axisSplit(shape []int, k int) (outer, n, inner int) {
 	return shapeSize(shape[:k]), shape[k], shapeSize(shape[k+1:])
 }
 
-// match reports whether two elements are equal, with tolerance for
+// match reports whether two elements are equal, with tolerance ct for
 // numbers and recursively for nested arrays.
-func match(x, y Value) bool {
+func match(x, y Value, ct float64) bool {
 	switch x := x.(type) {
 	case float64:
 		y, ok := y.(float64)
-		return ok && tolEq(x, y)
+		return ok && tolEq(x, y, ct)
 	case Char:
 		y, ok := y.(Char)
 		return ok && x == y
@@ -186,7 +186,7 @@ func match(x, y Value) bool {
 			return false
 		}
 		for i := range x.Size() {
-			if !match(x.At(i), y.At(i)) {
+			if !match(x.At(i), y.At(i), ct) {
 				return false
 			}
 		}

@@ -9,6 +9,7 @@ import (
 
 // Interp holds the workspace and I/O of one interpreter session.
 type Interp struct {
+	env      // system variables
 	vars     map[string]*Array
 	fns      map[string]*Function
 	fnGen    int       // bumped when fns change; invalidates parse caches
@@ -24,6 +25,7 @@ type Interp struct {
 // New returns an interpreter writing to out.
 func New(out io.Writer) *Interp {
 	return &Interp{
+		env:  defaultEnv(),
 		vars: map[string]*Array{},
 		fns:  map[string]*Function{},
 		out:  out,
@@ -62,8 +64,26 @@ func withSrc(err error, src string) error {
 }
 
 func (in *Interp) print(v *Array) error {
-	_, err := fmt.Fprintln(in.out, in.paint(styleResult, Format(v)))
+	_, err := fmt.Fprintln(in.out, in.paint(styleResult, format(v, in.pp)))
 	return err
+}
+
+// getVar returns the value of a variable or system variable.
+func (in *Interp) getVar(name string) (*Array, bool) {
+	if isSysName(name) {
+		return in.env.get(name), true
+	}
+	v, ok := in.vars[name]
+	return v, ok
+}
+
+// setVar assigns a variable or system variable.
+func (in *Interp) setVar(name string, v *Array) error {
+	if isSysName(name) {
+		return in.env.set(name, v)
+	}
+	in.vars[name] = v
+	return nil
 }
 
 // Run executes lines from r until EOF or a line starting with "/*".

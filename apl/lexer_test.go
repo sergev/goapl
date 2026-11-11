@@ -29,6 +29,7 @@ func TestLex(t *testing.T) {
 		{"L1:→L1", "NAME(L1) SPEC(:) SPEC(→) NAME(L1)"},
 		{"1 2∘.×3", "NUM(1 2) SPEC(∘) SPEC(.) PRIM(×) NUM(3)"},
 		{"⎕←X", "SPEC(⎕) SPEC(←) NAME(X)"},
+		{"⎕IO←⎕ X", "NAME(⎕IO) SPEC(←) SPEC(⎕) NAME(X)"},
 		{"LongName_∆1←x", "NAME(LongName_∆1) SPEC(←) NAME(x)"},
 	}
 	for _, c := range cases {

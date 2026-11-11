@@ -126,7 +126,7 @@ different.
 | `→` | branch |
 | `[ ; ]` | indexing |
 | `( )` | grouping |
-| `⎕` | input and output |
+| `⎕` | input and output; starts system variable names |
 | `∇` | function definition |
 | `:` | label |
 | `⍝` | comment |
@@ -156,8 +156,8 @@ Rank has no limit. An array may be empty: `⍳0` is a vector of length 0.
 ```
 
 Numbers are 64-bit floating point. Equality and the other comparisons
-use a relative tolerance of 1E¯13, so tiny rounding errors do not
-matter.
+use a relative tolerance of 1E¯13 (`⎕CT`), so tiny rounding errors do
+not matter.
 
 ```apl
       (0.1+0.2)=0.3
@@ -400,8 +400,8 @@ DOMAIN ERROR
 
 ## Index generator `⍳N`
 
-The first N positive integers. N is a non-negative integer, a scalar or
-one-element vector.
+The first N indices: `1 2 … N`, or `0 1 … N-1` when `⎕IO` is 0. N is a
+non-negative integer, a scalar or one-element vector.
 
 ```apl
       ⍳5
@@ -412,8 +412,8 @@ one-element vector.
 
 ## Index of `A⍳B`
 
-For each element of B, its first position in vector A, or `1+⍴A` if it is
-not there. The result has the shape of B.
+For each element of B, the index of its first occurrence in vector A,
+or `⎕IO+⍴A` if it is not there. The result has the shape of B.
 
 ```apl
       10 20 30⍳20 40
@@ -578,8 +578,9 @@ result is `(⍴A),⍴B`.
 
 ## Selecting elements
 
-`X[I]` selects elements of vector X at positions I. Positions start at 1.
-I may be any array of integers; the result has the shape of I.
+`X[I]` selects elements of vector X at positions I. Positions start at 1
+(or at `⎕IO`; see [System variables](#system-variables)). I may be any
+array of integers; the result has the shape of I.
 
 ```apl
       V←10 20 30 40
@@ -724,6 +725,95 @@ is asked for again.
       2×⍳3
       X
 2 4 6
+```
+
+# System variables
+
+System variables are names starting with `⎕` that control the
+interpreter. They are read and assigned like variables, and always have
+a value.
+
+| Name | Meaning | Default | Values |
+|:--|:--|:--|:--|
+| `⎕IO` | index origin | 1 | 0 or 1 |
+| `⎕CT` | comparison tolerance | 1E¯13 | 0 to just below 1 |
+| `⎕PP` | print precision, in digits | 10 | 1 or more; above 17 means 17 |
+| `⎕RL` | random link, the seed of `?` | 16807 | 1 to ¯2+2*31 |
+
+A value outside the allowed range is a `DOMAIN ERROR`; an unknown `⎕`
+name is a `SYNTAX ERROR`.
+
+```apl
+      ⎕PP
+10
+      ⎕IO←2
+DOMAIN ERROR
+⎕IO←2
+^
+```
+
+## Index origin `⎕IO`
+
+`⎕IO` is the first index: of `⍳`, of the result of `A⍳B`, and of
+indexing. Statement numbers, labels and branch targets do not depend on
+it.
+
+```apl
+      ⎕IO←0
+      ⍳5
+0 1 2 3 4
+      10 20 30⍳30
+2
+      V←10 20 30
+      V[0]
+10
+      ⎕IO←1
+```
+
+## Comparison tolerance `⎕CT`
+
+Two numbers are equal if they differ by at most `⎕CT` times the larger
+magnitude. The tolerance applies to comparisons, `A⍳B`, floor and
+ceiling (`⌊X` is rounded up if X is that close to the next integer), and
+residue. With `⎕CT←0` comparisons are exact.
+
+```apl
+      1=1+1E¯10
+0
+      ⎕CT←1E¯9
+      1=1+1E¯10
+1
+      ⎕CT←1E¯13
+      ⌊2.99999999999999
+3
+```
+
+## Print precision `⎕PP`
+
+`⎕PP` is the number of significant digits shown for a number.
+
+```apl
+      ⎕PP←4
+      ÷3
+0.3333
+      ⎕PP←10
+```
+
+## Localizing system variables
+
+A system variable may be listed among the local names of a function.
+Unlike other local names, it keeps its value at the start of the call;
+assignments inside the function are undone when it returns.
+
+```apl
+      ∇R←ORIGIN0 N;⎕IO
+[1] ⎕IO←0
+[2] R←⍳N
+[3] ∇
+      ORIGIN0 3
+0 1 2
+      ⍳3
+1 2 3
 ```
 
 # User functions
@@ -932,7 +1022,7 @@ LENGTH ERROR
 | SYNTAX ERROR | malformed number, unknown glyph, unbalanced parentheses or brackets, misplaced function, assignment to a function name |
 | VALUE ERROR | name without a value; function without a result used as a value |
 | VALENCE ERROR | `=5`; a function given the wrong number of arguments |
-| DOMAIN ERROR | `1÷0`, `~2`, `⍳¯1`, `¯8*0.5`, `V[1.5]`, `→1.5`, `⍟/⍳0` |
+| DOMAIN ERROR | `1÷0`, `~2`, `⍳¯1`, `¯8*0.5`, `V[1.5]`, `→1.5`, `⍟/⍳0`, `⎕IO←2` |
 | LENGTH ERROR | shapes of the same rank differ; `X[I]←Y` with the wrong shape |
 | RANK ERROR | ranks differ; a matrix where a vector is needed; wrong number of indices |
 | INDEX ERROR | `V[0]`, `V[1+⍴V]` |
@@ -991,6 +1081,7 @@ operand    := ( number... | name | niladic-fn | ⎕ | ( expr ) ) { [ index ] }
 index      := [ expr ] { ; [ expr ] }
 fn         := primitive | primitive / | primitive . primitive
             | ∘ . primitive | user-fn
+name       := variable | ⎕IO | ⎕CT | ⎕PP | ⎕RL
 header     := ∇ [ name ← ] [ name ] name [ name ] { ; name }
 ```
 
@@ -1010,7 +1101,7 @@ header     := ∇ [ name ← ] [ name ] name [ name ] { ; name }
 | `~` | not Y | |
 | `= ≠ < ≤ ≥ >` | | comparison |
 | `∧ ∨` | | and, or |
-| `⍳` | 1 to Y | position of Y in X |
+| `⍳` | first Y indices | index of Y in X |
 | `⍴` | shape of Y | Y reshaped to X |
 | `,` | Y as vector | X joined to Y |
 | `/` | | Y replicated by X |

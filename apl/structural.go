@@ -1,10 +1,8 @@
 package apl
 
-import "math"
-
 type structFn struct {
-	monad func(x *Array) (*Array, error)
-	dyad  func(a, b *Array) (*Array, error)
+	monad func(e *env, x *Array) (*Array, error)
+	dyad  func(e *env, a, b *Array) (*Array, error)
 }
 
 var structFns = map[string]*structFn{
@@ -12,15 +10,6 @@ var structFns = map[string]*structFn{
 	"⍴": {monad: shapeOf, dyad: reshape},
 	",": {monad: ravel, dyad: catenate},
 	"/": {dyad: compress},
-}
-
-// toInt converts a near-integer to int.
-func toInt(v float64) (int, bool) {
-	r := math.Round(v)
-	if !tolEq(v, r) || math.Abs(r) > math.MaxInt32 {
-		return 0, false
-	}
-	return int(r), true
 }
 
 // toInts converts a numeric array to non-negative integers.
@@ -40,8 +29,8 @@ func toInts(a *Array) ([]int, error) {
 	return r, nil
 }
 
-// interval is ⍳N: 1 2 ... N.
-func interval(x *Array) (*Array, error) {
+// interval is ⍳N: the first N indices from ⎕IO.
+func interval(e *env, x *Array) (*Array, error) {
 	if x.Rank() > 1 {
 		return nil, newError(RankError)
 	}
@@ -54,12 +43,12 @@ func interval(x *Array) (*Array, error) {
 	}
 	r := make([]float64, n[0])
 	for i := range r {
-		r[i] = float64(i + 1)
+		r[i] = float64(i + e.io)
 	}
 	return Vector(r), nil
 }
 
-func shapeOf(x *Array) (*Array, error) {
+func shapeOf(_ *env, x *Array) (*Array, error) {
 	r := make([]float64, x.Rank())
 	for i, d := range x.Shape {
 		r[i] = float64(d)
@@ -67,22 +56,22 @@ func shapeOf(x *Array) (*Array, error) {
 	return Vector(r), nil
 }
 
-func ravel(x *Array) (*Array, error) {
+func ravel(_ *env, x *Array) (*Array, error) {
 	return &Array{Shape: []int{x.Size()}, Data: x.Data, Elems: x.Elems, Proto: x.Proto}, nil
 }
 
-// indexOf is A⍳B: position of each B in vector A, or 1+⍴A if absent.
-func indexOf(a, b *Array) (*Array, error) {
+// indexOf is A⍳B: index of each B in vector A, or ⎕IO+⍴A if absent.
+func indexOf(e *env, a, b *Array) (*Array, error) {
 	if a.Rank() != 1 {
 		return nil, newError(RankError)
 	}
 	r := &Array{Shape: b.Shape, Data: make([]float64, b.Size())}
 	for i := range r.Data {
 		v := b.At(i)
-		r.Data[i] = float64(a.Size() + 1)
+		r.Data[i] = float64(a.Size() + e.io)
 		for j := range a.Size() {
-			if match(v, a.At(j)) {
-				r.Data[i] = float64(j + 1)
+			if match(v, a.At(j), e.ct) {
+				r.Data[i] = float64(j + e.io)
 				break
 			}
 		}
@@ -91,7 +80,7 @@ func indexOf(a, b *Array) (*Array, error) {
 }
 
 // reshape is A⍴B, cycling B; an empty B gives its fill element.
-func reshape(a, b *Array) (*Array, error) {
+func reshape(_ *env, a, b *Array) (*Array, error) {
 	if a.Rank() > 1 {
 		return nil, newError(RankError)
 	}
@@ -110,7 +99,7 @@ func reshape(a, b *Array) (*Array, error) {
 }
 
 // catenate is A,B for scalars and vectors.
-func catenate(a, b *Array) (*Array, error) {
+func catenate(_ *env, a, b *Array) (*Array, error) {
 	if a.Rank() > 1 || b.Rank() > 1 {
 		return nil, newError(RankError)
 	}
@@ -125,9 +114,9 @@ func catenate(a, b *Array) (*Array, error) {
 	return General([]int{n}, append(r, b.elems()...), a.Fill()), nil
 }
 
-// indexPositions returns flat offsets selected by idx (nil = whole axis)
-// and the shape of the selection.
-func indexPositions(shape []int, idx []*Array) ([]int, []int, error) {
+// indexPositions returns flat offsets selected by idx (nil = whole axis,
+// indices from io) and the shape of the selection.
+func indexPositions(io int, shape []int, idx []*Array) ([]int, []int, error) {
 	if len(idx) != len(shape) {
 		return nil, nil, newError(RankError)
 	}
@@ -152,10 +141,11 @@ func indexPositions(shape []int, idx []*Array) ([]int, []int, error) {
 				if !ok {
 					return nil, nil, newError(DomainError)
 				}
-				if n < 1 || n > shape[k] {
+				n -= io
+				if n < 0 || n >= shape[k] {
 					return nil, nil, newError(IndexError)
 				}
-				sel[i] = n - 1
+				sel[i] = n
 			}
 			rshape = append(rshape, ix.Shape...)
 		}
@@ -171,8 +161,8 @@ func indexPositions(shape []int, idx []*Array) ([]int, []int, error) {
 }
 
 // index is X[I;J;...].
-func index(x *Array, idx []*Array) (*Array, error) {
-	pos, shape, err := indexPositions(x.Shape, idx)
+func index(e *env, x *Array, idx []*Array) (*Array, error) {
+	pos, shape, err := indexPositions(e.io, x.Shape, idx)
 	if err != nil {
 		return nil, err
 	}
@@ -180,8 +170,8 @@ func index(x *Array, idx []*Array) (*Array, error) {
 }
 
 // indexAssign returns a copy of x with X[I;J;...]←v applied.
-func indexAssign(x *Array, idx []*Array, v *Array) (*Array, error) {
-	pos, shape, err := indexPositions(x.Shape, idx)
+func indexAssign(e *env, x *Array, idx []*Array, v *Array) (*Array, error) {
+	pos, shape, err := indexPositions(e.io, x.Shape, idx)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +199,7 @@ func indexAssign(x *Array, idx []*Array, v *Array) (*Array, error) {
 }
 
 // compress is A/B along the last axis; A gives a repeat count per item.
-func compress(a, b *Array) (*Array, error) {
+func compress(_ *env, a, b *Array) (*Array, error) {
 	if a.Rank() > 1 {
 		return nil, newError(RankError)
 	}

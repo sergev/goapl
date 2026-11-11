@@ -41,8 +41,10 @@ func (in *Interp) defineHeader(line string, toks []Token) error {
 	f := &Function{}
 	var names []string
 	i := 0
-	name := func() (string, error) {
-		if i >= len(toks) || toks[i].Kind != Name {
+	// name reads a name; sys allows a system variable.
+	name := func(sys bool) (string, error) {
+		if i >= len(toks) || toks[i].Kind != Name ||
+			isSysName(toks[i].Text) && !(sys && sysVars[toks[i].Text]) {
 			pos := len([]rune(line))
 			if i < len(toks) {
 				pos = toks[i].Pos
@@ -52,25 +54,25 @@ func (in *Interp) defineHeader(line string, toks []Token) error {
 		i++
 		return toks[i-1].Text, nil
 	}
-	n, err := name()
+	n, err := name(false)
 	if err != nil {
 		return err
 	}
 	if i < len(toks) && isSpecial(toks[i], "←") {
 		i++
 		f.Result = n
-		if n, err = name(); err != nil {
+		if n, err = name(false); err != nil {
 			return err
 		}
 	}
 	names = append(names, n)
-	for len(names) < 3 && i < len(toks) && toks[i].Kind == Name {
+	for len(names) < 3 && i < len(toks) && toks[i].Kind == Name && !isSysName(toks[i].Text) {
 		names = append(names, toks[i].Text)
 		i++
 	}
 	for i < len(toks) && isSpecial(toks[i], ";") {
 		i++
-		l, err := name()
+		l, err := name(true)
 		if err != nil {
 			return err
 		}
@@ -138,7 +140,7 @@ func (in *Interp) call(f *Function, left, right *Array) (*Array, error) {
 	for _, st := range f.Stmts {
 		locals = append(locals, st.label)
 	}
-	saved := map[string]*Array{}
+	saved := map[string]*Array{} // nil: had no value
 	for _, n := range locals {
 		if n == "" {
 			continue
@@ -146,14 +148,19 @@ func (in *Interp) call(f *Function, left, right *Array) (*Array, error) {
 		if _, done := saved[n]; done {
 			continue
 		}
-		saved[n] = in.vars[n]
-		delete(in.vars, n)
+		saved[n], _ = in.getVar(n)
+		if !isSysName(n) {
+			delete(in.vars, n) // a localized system variable keeps its value
+		}
 	}
 	defer func() {
 		for n, v := range saved {
-			if v == nil {
+			switch {
+			case isSysName(n):
+				in.env.set(n, v)
+			case v == nil:
 				delete(in.vars, n)
-			} else {
+			default:
 				in.vars[n] = v
 			}
 		}

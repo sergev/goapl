@@ -1,16 +1,16 @@
 package apl
 
 // reduce applies f/ along the last axis.
-func reduce(glyph string, x *Array) (*Array, error) {
+func reduce(e *env, glyph string, x *Array) (*Array, error) {
 	if x.IsScalar() {
 		return x, nil
 	}
-	return reduceAxis(glyph, x, x.Rank()-1)
+	return reduceAxis(e, glyph, x, x.Rank()-1)
 }
 
 // reduceAxis applies f/ along axis k, folding from the right.
 // An empty axis gives f's identity.
-func reduceAxis(glyph string, x *Array, k int) (*Array, error) {
+func reduceAxis(e *env, glyph string, x *Array, k int) (*Array, error) {
 	d, err := x.numeric()
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func reduceAxis(glyph string, x *Array, k int) (*Array, error) {
 			base := i*n*inner + l
 			acc := d[base+(n-1)*inner]
 			for j := n - 2; j >= 0; j-- {
-				if acc, err = f(d[base+j*inner], acc); err != nil {
+				if acc, err = f(e, d[base+j*inner], acc); err != nil {
 					return nil, err
 				}
 			}
@@ -45,7 +45,7 @@ func reduceAxis(glyph string, x *Array, k int) (*Array, error) {
 }
 
 // outer is A∘.fB.
-func outer(f dyadFn, a, b *Array) (*Array, error) {
+func outer(e *env, f dyadFn, a, b *Array) (*Array, error) {
 	ad, err := a.numeric()
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func outer(f dyadFn, a, b *Array) (*Array, error) {
 	r := &Array{Shape: shape, Data: make([]float64, 0, len(ad)*len(bd))}
 	for _, x := range ad {
 		for _, y := range bd {
-			v, err := f(x, y)
+			v, err := f(e, x, y)
 			if err != nil {
 				return nil, err
 			}
@@ -70,7 +70,7 @@ func outer(f dyadFn, a, b *Array) (*Array, error) {
 
 // inner is Af.gB: f/ over g applied along the last axis of A
 // and the first axis of B.
-func inner(fg, gg string, a, b *Array) (*Array, error) {
+func inner(e *env, fg, gg string, a, b *Array) (*Array, error) {
 	f, g := scalarFns[fg].dyad, scalarFns[gg].dyad
 	ad, err := a.numeric()
 	if err != nil {
@@ -122,12 +122,12 @@ func inner(fg, gg string, a, b *Array) (*Array, error) {
 		for j := range cols {
 			var acc float64
 			for k := n - 1; k >= 0; k-- {
-				v, err := g(elem(a, ad, i*n+k), elem(b, bd, k*cols+j))
+				v, err := g(e, elem(a, ad, i*n+k), elem(b, bd, k*cols+j))
 				if err != nil {
 					return nil, err
 				}
 				if k < n-1 {
-					if v, err = f(v, acc); err != nil {
+					if v, err = f(e, v, acc); err != nil {
 						return nil, err
 					}
 				}

@@ -111,6 +111,11 @@ func (in *Interp) parse(toks []Token, end int) (node, error) {
 	if len(toks) == 0 {
 		return nil, nil
 	}
+	for _, t := range toks {
+		if t.Kind == Name && isSysName(t.Text) && !sysVars[t.Text] {
+			return nil, errorAt(SyntaxError, t.Pos)
+		}
+	}
 	p := &parser{toks: toks, end: end, fns: in.fns}
 	var n node
 	var err error
