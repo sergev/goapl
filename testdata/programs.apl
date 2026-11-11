@@ -1,0 +1,61 @@
+∇R←A GCD B
+L:→(B=0)/DONE
+R←B
+B←B|A
+A←R
+→L
+DONE:R←A
+∇
+48 GCD 36
+17 GCD 5
+∇R←AVG X
+R←(+/X)÷⍴X
+∇
+AVG 1 2 3 4
+∇R←PRIMES N;I;C
+R←⍳0
+I←2
+LOOP:→(I>N)/0
+C←+/0=(⍳I)|I
+→(C≠2)/NEXT
+R←R,I
+NEXT:I←I+1
+→LOOP
+∇
+PRIMES 30
+∇R←ID N
+R←(⍳N)∘.=⍳N
+∇
+ID 3
+∇R←COLLATZ N
+R←0
+L:→(N=1)/0
+R←R+1
+→((2|N)=1)/ODD
+N←N÷2
+→L
+ODD:N←1+3×N
+→L
+∇
+COLLATZ 27
+∇R←PASCAL N;I
+R←1
+I←1
+L:→(I≥N)/0
+R←(0,R)+R,0
+I←I+1
+→L
+∇
+PASCAL 6
+∇R←P INTEREST Y
+R←P×1.05*Y
+∇
+1000 INTEREST 10
+∇TABLE N
+⎕←(⍳N)∘.×⍳N
+∇
+TABLE 4
+M←3 3⍴2 0 1 1 3 2 1 1 1
+V←1 2 3
+M+.×V
+(+/M×M)*0.5

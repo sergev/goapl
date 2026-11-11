@@ -97,11 +97,14 @@ R←R×I
 ## Tests
 
 `make test` runs unit tests and golden tests: each `testdata/*.apl` script
-is run and its output compared with the matching `.out` file. After an
+is run and its output compared with the matching `.out` file.
+`apl/parity_test.go` ports every case of the prototype's
+`tests/run_symbol_tests.py`, covering all 89 glyphs of its character set;
+the few deliberate differences are marked there. After an
 intended change in output, regenerate them with `go test ./apl -update`
 and review the diff.
 
 ## Status
 
-Step 4 done: the language of the original is implemented. Next: parity
-tests against the Pascal prototype.
+Steps 1–5 done: the language of the original is implemented and passes
+the prototype's test suite. Next: growing toward APL2 (step 6).

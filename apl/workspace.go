@@ -41,6 +41,9 @@ func (in *Interp) Exec(line string) error {
 	if len(toks) > 0 && isSpecial(toks[0], "∇") {
 		return withSrc(in.defineHeader(line, toks), line)
 	}
+	if len(toks) >= 2 && toks[0].Kind == Name && isSpecial(toks[1], ":") {
+		toks = toks[2:] // label is ignored outside a function
+	}
 	n, err := in.parse(toks, len([]rune(line)))
 	if err == nil {
 		_, err = in.run(n) // a branch at top level is ignored
