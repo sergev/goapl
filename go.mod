@@ -1,0 +1,3 @@
+module github.com/sergev/goapl
+
+go 1.27.3

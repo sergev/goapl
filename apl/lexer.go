@@ -1,0 +1,163 @@
+// Package apl implements an APL interpreter.
+package apl
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+	"unicode"
+)
+
+// Kind classifies a token.
+type Kind int
+
+const (
+	Number  Kind = iota // numeric vector constant
+	Name                // identifier
+	Prim                // primitive function or operator glyph
+	Special             // ← → ∇ ⎕ ( ) [ ] ; : . ∘
+)
+
+// Token is a lexical unit of an APL line.
+type Token struct {
+	Kind Kind
+	Pos  int       // rune offset in line
+	Text string    // name or glyph
+	Nums []float64 // values for Number
+}
+
+func (t Token) String() string {
+	switch t.Kind {
+	case Number:
+		s := make([]string, len(t.Nums))
+		for i, v := range t.Nums {
+			s[i] = strconv.FormatFloat(v, 'g', -1, 64)
+		}
+		return "NUM(" + strings.Join(s, " ") + ")"
+	case Name:
+		return "NAME(" + t.Text + ")"
+	case Prim:
+		return "PRIM(" + t.Text + ")"
+	}
+	return "SPEC(" + t.Text + ")"
+}
+
+const (
+	primGlyphs    = "+-×÷*⍳⍴,~=≠<≤≥>∧∨⌈⌊○/\\?↑↓⊥⊤|ε∊⌽⊖⍉⍋⍒!⍟"
+	specialGlyphs = "←→∇⎕()[];:.∘"
+)
+
+// MaxNameLength is the identifier length limit of the prototype.
+const MaxNameLength = 10
+
+// LexError reports a lexical error at a rune position.
+type LexError struct {
+	Pos int
+	Msg string
+}
+
+func (e *LexError) Error() string { return e.Msg }
+
+// Lex splits a line into tokens.
+func Lex(line string) ([]Token, error) {
+	src := []rune(line)
+	var toks []Token
+	i := 0
+	for i < len(src) {
+		c := src[i]
+		switch {
+		case c == ' ' || c == '\t':
+			i++
+		case isDigit(c) || c == '¯' || (c == '.' && i+1 < len(src) && isDigit(src[i+1])):
+			start := i
+			var nums []float64
+			for {
+				v, n, err := lexNumber(src, i)
+				if err != nil {
+					return nil, err
+				}
+				nums = append(nums, v)
+				i = n
+				j := i
+				for j < len(src) && src[j] == ' ' {
+					j++
+				}
+				if j < len(src) && (isDigit(src[j]) || src[j] == '¯' ||
+					(src[j] == '.' && j+1 < len(src) && isDigit(src[j+1]))) {
+					i = j
+					continue
+				}
+				break
+			}
+			toks = append(toks, Token{Kind: Number, Pos: start, Nums: nums})
+		case isLetter(c):
+			start := i
+			for i < len(src) && (isLetter(src[i]) || isDigit(src[i])) {
+				i++
+			}
+			if i-start > MaxNameLength {
+				return nil, &LexError{start, Messages[70]}
+			}
+			toks = append(toks, Token{Kind: Name, Pos: start, Text: string(src[start:i])})
+		case strings.ContainsRune(primGlyphs, c):
+			toks = append(toks, Token{Kind: Prim, Pos: i, Text: string(c)})
+			i++
+		case strings.ContainsRune(specialGlyphs, c):
+			toks = append(toks, Token{Kind: Special, Pos: i, Text: string(c)})
+			i++
+		default:
+			return nil, &LexError{i, Messages[4]}
+		}
+	}
+	return toks, nil
+}
+
+// lexNumber reads one number at src[i]; returns value and next index.
+func lexNumber(src []rune, i int) (float64, int, error) {
+	var b strings.Builder
+	if src[i] == '¯' {
+		b.WriteByte('-')
+		i++
+		if i >= len(src) || !(isDigit(src[i]) || src[i] == '.') {
+			return 0, i, &LexError{i, Messages[1]}
+		}
+	}
+	for i < len(src) && isDigit(src[i]) {
+		b.WriteRune(src[i])
+		i++
+	}
+	if i < len(src) && src[i] == '.' {
+		b.WriteByte('.')
+		i++
+		if i >= len(src) || !isDigit(src[i]) {
+			return 0, i, &LexError{i, Messages[2]}
+		}
+		for i < len(src) && isDigit(src[i]) {
+			b.WriteRune(src[i])
+			i++
+		}
+	}
+	if i < len(src) && src[i] == 'E' && i+1 < len(src) &&
+		(isDigit(src[i+1]) || src[i+1] == '¯') {
+		b.WriteByte('e')
+		i++
+		if src[i] == '¯' {
+			b.WriteByte('-')
+			i++
+		}
+		for i < len(src) && isDigit(src[i]) {
+			b.WriteRune(src[i])
+			i++
+		}
+	}
+	v, err := strconv.ParseFloat(b.String(), 64)
+	if err != nil {
+		return 0, i, &LexError{i, fmt.Sprintf("bad number %q", b.String())}
+	}
+	return v, i, nil
+}
+
+func isDigit(c rune) bool { return c >= '0' && c <= '9' }
+func isLetter(c rune) bool {
+	return c == '∆' || c == '_' || unicode.IsLetter(c) && c != 'ε' && c != '∊'
+}
