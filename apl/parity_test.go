@@ -90,7 +90,6 @@ func parityCases() []parityCase {
 		{name: "quad_alone", lines: []string{"⎕", "5"}, want: "⎕:\n5"},
 		// glyphs in APLCharSet that are not functions
 		{name: "charset_only_DoubleQuote", lines: []string{`1"2`}, class: SyntaxError},
-		{name: "charset_only_QuestionMark", lines: []string{"1?2"}, class: NonceError},
 		{name: "charset_only_omega", lines: []string{"1ω2"}, class: SyntaxError},
 		{name: "charset_only_epsilon", lines: []string{"1ε2"}, class: NonceError},
 		{name: "charset_only_UpArrow", lines: []string{"1↑2"}, class: NonceError},
@@ -111,8 +110,10 @@ func parityCases() []parityCase {
 		// Deliberate differences from the prototype.
 		// Errors are reported by APL2 class, not by the prototype's
 		// numbered messages. Unimplemented glyphs give NONCE ERROR.
-		// ○/ was log to base; ○ is reserved for the circular functions.
-		{name: "differs_reduce_circle", lines: []string{"○/2 8"}, class: SyntaxError},
+		// ○/ was log to base; ○ is the circular functions.
+		{name: "differs_reduce_circle", lines: []string{"○/2 8"}, want: "¯0.1455000338"},
+		// 1?2 was an error; ? is deal.
+		{name: "differs_QuestionMark", lines: []string{"1?2"}, want: "1"},
 		// Reducing a scalar, one item or an empty axis were errors.
 		{name: "differs_reduce_scalar", lines: []string{"+/5"}, want: "5"},
 		{name: "differs_reduce_one", lines: []string{"+/,5"}, want: "5"},

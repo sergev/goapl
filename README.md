@@ -53,7 +53,7 @@ session, as in the original.
 | Monadic   | `+` identity, `-` negate, `×` signum, `÷` reciprocal, `*` exp, `~` not, `⍳` index generator, `⍴` shape, `,` ravel |
 | Dyadic    | `+ - × ÷ *`, `⍳` index of, `⍴` reshape, `,` catenate, `= ≠ < ≤ ≥ >`, `∧ ∨` |
 | Operators | `f/` reduction (scalars, one element and empty axes as in APL2), `f.g` inner product, `∘.f` outer product |
-| Added     | `⌈ ⌊` ceiling/floor, max/min; `\|` magnitude/residue; `⍟` natural log, log to base; `A/B` compress |
+| Added     | `⌈ ⌊` ceiling/floor, max/min; `\|` magnitude/residue; `⍟` natural log, log to base; `○` pi times, circular functions; `!` factorial, binomial; `?` roll, deal; `⍲ ⍱` nand, nor; `A/B` compress |
 | Other     | `←` assignment, `A[I;J]` indexing and indexed assignment, `⎕` input/output, `⍞` character input/output, `→` branch, labels |
 | System    | `⎕IO` index origin, `⎕CT` comparison tolerance, `⎕PP` print precision, `⎕RL` random link; localizable in headers |
 | Functions | `∇` definitions: niladic, monadic, dyadic, with or without explicit result |
@@ -107,7 +107,7 @@ R←R×I
 `make test` runs unit tests and golden tests. Each `testdata/*.apl` script
 covers one area of the language (lexical rules, monadic and dyadic
 functions, reduction, structural functions, products, indexing, syntax,
-user functions, `⎕`, output format, edge cases, system variables, characters), with `⍝` comments saying
+user functions, `⎕`, output format, edge cases, system variables, characters, more scalar functions), with `⍝` comments saying
 what each group checks. It is run as an interactive session, and the
 transcript (input after the prompt, then output) is compared with the
 matching `.out` file.

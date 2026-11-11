@@ -8,14 +8,8 @@ one), README updates, and `make test` and `make compare` passing.
 Already done: `⍝` comments; `⌈ ⌊ | ⍟` monadic and dyadic; compress `A/B`;
 APL2 error classes and behavior where the original differs (T1);
 arrays of any rank with general (character, mixed, nested) elements (T2);
-`⎕IO ⎕CT ⎕PP ⎕RL` (T3); characters, strings and `⍞` (T4).
-
-## T5. Remaining scalar functions
-
-- `○` pi times; `A○B` circular functions (`¯7` to `7`).
-- `!` factorial/gamma; `A!B` binomial.
-- `?` roll; `A?B` deal (uses `⎕RL` from T3, so tests are repeatable).
-- `⍲ ⍱` nand, nor.
+`⎕IO ⎕CT ⎕PP ⎕RL` (T3); characters, strings and `⍞` (T4);
+`○ ! ? ⍲ ⍱` (T5).
 
 ## T6. Operators and axis
 

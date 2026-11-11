@@ -33,6 +33,14 @@
 1
       ⍟/2 8
 3
+      !/3 5
+10
+      ○/2 8
+¯0.1455000338
+      ⍲/1 1 0
+0
+      ⍱/0 0 1
+1
       ⍝ Reduction runs along the last axis
       +/2 3⍴⍳6
 6 15
@@ -95,10 +103,6 @@ SYNTAX ERROR
       ,/1 2
 SYNTAX ERROR
 ,/1 2
-^
-      ○/2 8
-SYNTAX ERROR
-○/2 8
 ^
       /1 2
 SYNTAX ERROR

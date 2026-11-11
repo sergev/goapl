@@ -10,6 +10,40 @@ var structFns = map[string]*structFn{
 	"⍴": {monad: shapeOf, dyad: reshape},
 	",": {monad: ravel, dyad: catenate},
 	"/": {dyad: compress},
+	"?": {dyad: deal},
+}
+
+// deal is A?B: A distinct random indices out of the first B.
+func deal(e *env, a, b *Array) (*Array, error) {
+	if a.Size() != 1 || b.Size() != 1 || a.Rank() > 1 || b.Rank() > 1 {
+		return nil, newError(LengthError)
+	}
+	n, err := toInts(a)
+	if err != nil {
+		return nil, err
+	}
+	m, err := toInts(b)
+	if err != nil {
+		return nil, err
+	}
+	if n[0] > m[0] {
+		return nil, newError(DomainError)
+	}
+	// Partial Fisher-Yates shuffle over a sparse permutation.
+	perm := map[int]int{}
+	at := func(i int) int {
+		if v, ok := perm[i]; ok {
+			return v
+		}
+		return i
+	}
+	r := make([]float64, n[0])
+	for i := range r {
+		j := i + int(e.random()*float64(m[0]-i))
+		r[i] = float64(at(j) + e.io)
+		perm[j] = at(i)
+	}
+	return Vector(r), nil
 }
 
 // toInts converts a numeric array to non-negative integers.

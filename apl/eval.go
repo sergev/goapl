@@ -171,17 +171,14 @@ func (in *Interp) monad(f *fnNode, x *Array) (*Array, error) {
 	case fnInner, fnOuter:
 		return nil, newError(SyntaxError)
 	}
-	if sf := scalarFns[f.glyph]; sf != nil {
-		if sf.monad == nil {
-			return nil, newError(ValenceError)
-		}
+	sf, st := scalarFns[f.glyph], structFns[f.glyph]
+	switch {
+	case sf != nil && sf.monad != nil:
 		return applyMonad(&in.env, sf.monad, x)
-	}
-	if sf := structFns[f.glyph]; sf != nil {
-		if sf.monad == nil {
-			return nil, newError(ValenceError)
-		}
-		return sf.monad(&in.env, x)
+	case st != nil && st.monad != nil:
+		return st.monad(&in.env, x)
+	case sf != nil || st != nil:
+		return nil, newError(ValenceError)
 	}
 	return nil, newError(NonceError)
 }
@@ -195,17 +192,14 @@ func (in *Interp) dyad(f *fnNode, a, b *Array) (*Array, error) {
 	case fnOuter:
 		return outer(&in.env, scalarFns[f.glyph], a, b)
 	}
-	if sf := scalarFns[f.glyph]; sf != nil {
-		if sf.dyad == nil {
-			return nil, newError(ValenceError)
-		}
+	sf, st := scalarFns[f.glyph], structFns[f.glyph]
+	switch {
+	case sf != nil && sf.dyad != nil:
 		return applyDyad(&in.env, sf, a, b)
-	}
-	if sf := structFns[f.glyph]; sf != nil {
-		if sf.dyad == nil {
-			return nil, newError(ValenceError)
-		}
-		return sf.dyad(&in.env, a, b)
+	case st != nil && st.dyad != nil:
+		return st.dyad(&in.env, a, b)
+	case sf != nil || st != nil:
+		return nil, newError(ValenceError)
 	}
 	return nil, newError(NonceError)
 }

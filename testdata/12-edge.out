@@ -123,17 +123,13 @@ SYNTAX ERROR
 →(
   ^
       ⍝ Functions that are not available
-      ?5
-NONCE ERROR
-?5
-^
       ↑5
 NONCE ERROR
 ↑5
 ^
-      1?2
+      1↓2
 NONCE ERROR
-1?2
+1↓2
  ^
       ⍝ Infinity
       *1000

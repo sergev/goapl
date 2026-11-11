@@ -126,9 +126,12 @@ quotes is an ordinary character.
 | `⌊` | floor | minimum |
 | \| | magnitude | residue |
 | `⍟` | natural logarithm | logarithm |
+| `○` | pi times | circular functions |
+| `!` | factorial | binomial |
+| `?` | roll | deal |
 | `~` | not | |
 | `= ≠ < ≤ ≥ >` | | comparisons |
-| `∧ ∨` | | and, or |
+| `∧ ∨ ⍲ ⍱` | | and, or, nand, nor |
 | `⍳` | index generator | index of |
 | `⍴` | shape | reshape |
 | `,` | ravel | catenate |
@@ -393,6 +396,86 @@ of B to the base A.
 3
 ```
 
+## Circular functions
+
+`○X` is pi times X. `A○B` applies to B the function numbered A:
+
+| A | `A○B` | A | `A○B` |
+|:--|:--|:--|:--|
+| 0 | `(1-B*2)*0.5` | | |
+| 1 | sine | ¯1 | arcsine |
+| 2 | cosine | ¯2 | arccosine |
+| 3 | tangent | ¯3 | arctangent |
+| 4 | `(1+B*2)*0.5` | ¯4 | `(¯1+B*2)*0.5`, with the sign of B |
+| 5 | hyperbolic sine | ¯5 | inverse hyperbolic sine |
+| 6 | hyperbolic cosine | ¯6 | inverse hyperbolic cosine |
+| 7 | hyperbolic tangent | ¯7 | inverse hyperbolic tangent |
+
+Angles are in radians. A result that is not a real number is a
+`DOMAIN ERROR`.
+
+```apl
+      ○1
+3.141592654
+      1○○÷6
+0.5
+      2○○1
+¯1
+      ¯3○1
+0.7853981634
+      0○0.6
+0.8
+      ¯1○2
+DOMAIN ERROR
+¯1○2
+  ^
+```
+
+## Factorial and binomial
+
+`!N` is the factorial of N. For a number that is not a non-negative
+integer it is the gamma function of N+1; negative integers are a
+`DOMAIN ERROR`.
+
+`A!B` is the number of ways to choose A things out of B: `(!B)÷(!A)×!B-A`.
+It is 0 if A is greater than B, and is extended to negative integers and
+to other numbers as in APL2.
+
+```apl
+      !5
+120
+      !0.5
+0.8862269255
+      2!5
+10
+      (0,⍳4)∘.!0,⍳4
+1 1 1 1 1
+0 1 2 3 4
+0 0 1 3 6
+0 0 0 1 4
+0 0 0 0 1
+```
+
+## Random numbers
+
+`?N` is a random integer from 1 to N (from `⎕IO`). It is a scalar
+function: `?6 6 6` rolls three dice. `A?B` deals A different integers
+from 1 to B, in random order.
+
+The numbers come from a generator whose state is `⎕RL`. Setting `⎕RL`
+repeats the sequence.
+
+```apl
+      ⎕RL←16807
+      ?6 6 6 6 6 6
+1 5 3 4 2 1
+      5?5
+4 1 5 2 3
+      ⎕RL←16807
+      ?6 6 6
+1 5 3
+```
+
 ## Comparisons
 
 `= ≠ < ≤ ≥ >` give 1 if the relation holds, else 0. They have no
@@ -420,7 +503,8 @@ equal to a number. The others need numbers.
 
 ## Logical functions
 
-`~X` is not. `A∧B` is and, `A∨B` is or. Arguments must be 0 or 1.
+`~X` is not. `A∧B` is and, `A∨B` is or, `A⍲B` is nand (not and),
+`A⍱B` is nor (not or). Arguments must be 0 or 1.
 
 ```apl
       ~1 0
@@ -429,6 +513,10 @@ equal to a number. The others need numbers.
 0 0 0 1
       0 0 1 1∨0 1 0 1
 0 1 1 1
+      0 0 1 1⍲0 1 0 1
+1 1 1 0
+      0 0 1 1⍱0 1 0 1
+1 0 0 0
       ~2
 DOMAIN ERROR
 ~2
@@ -1114,6 +1202,9 @@ goapl adds to the language of the Pascal original:
 - `⍝` comments.
 - Comparison tolerance.
 - Arrays of any rank (the original stopped at 3).
+- Characters, strings and `⍞`.
+- System variables `⎕IO ⎕CT ⎕PP ⎕RL`.
+- `○ ! ?` monadic and dyadic, `⍲ ⍱`.
 
 goapl follows APL2 where the original differs:
 
@@ -1122,7 +1213,7 @@ goapl follows APL2 where the original differs:
 - Reduction of a scalar, of one element, and of an empty axis gives a
   value instead of an error.
 - `0÷0` is 1.
-- `○/` is not the logarithm; use `⍟/`.
+- `○/` is not the logarithm but the circular function; use `⍟/`.
 - Names may be longer than 10 characters.
 - A function may have no statements.
 
@@ -1171,9 +1262,12 @@ header     := ∇ [ name ← ] [ name ] name [ name ] { ; name }
 | `⌊` | round down | smaller |
 | \| | absolute value | Y modulo X |
 | `⍟` | ln Y | log of Y base X |
+| `○` | pi times Y | circular function X of Y |
+| `!` | factorial of Y | X things out of Y |
+| `?` | random integer to Y | X random integers to Y |
 | `~` | not Y | |
 | `= ≠ < ≤ ≥ >` | | comparison |
-| `∧ ∨` | | and, or |
+| `∧ ∨ ⍲ ⍱` | | and, or, nand, nor |
 | `⍳` | first Y indices | index of Y in X |
 | `⍴` | shape of Y | Y reshaped to X |
 | `,` | Y as vector | X joined to Y |
