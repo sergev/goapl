@@ -2,15 +2,6 @@ package apl
 
 import "testing"
 
-// chars returns a character vector.
-func chars(s string) *Array {
-	var e []Value
-	for _, c := range s {
-		e = append(e, Char(c))
-	}
-	return General([]int{len(e)}, e, Char(' '))
-}
-
 func TestGeneral(t *testing.T) {
 	if a := General([]int{2}, []Value{1.0, 2.0}, nil); !a.IsNumeric() || a.Data[1] != 2 {
 		t.Errorf("all numbers: %+v", a)
@@ -26,12 +17,12 @@ func TestGeneral(t *testing.T) {
 	if m.IsNumeric() || m.At(0) != 1.0 || m.Fill() != 0.0 {
 		t.Errorf("mixed: %+v", m)
 	}
-	n := General([]int{2}, []Value{Vector([]float64{1, 2}), chars("ab")}, nil)
+	n := General([]int{2}, []Value{Vector([]float64{1, 2}), Chars("ab")}, nil)
 	p, ok := n.Fill().(*Array)
 	if !ok || !match(p, Vector([]float64{0, 0}), defaultCT) {
 		t.Errorf("nested prototype: %v", n.Fill())
 	}
-	if p := prototype(chars("ab")).(*Array); !match(p, chars("  "), defaultCT) {
+	if p := prototype(Chars("ab")).(*Array); !match(p, Chars("  "), defaultCT) {
 		t.Errorf("character array prototype: %v", p)
 	}
 }
@@ -45,9 +36,9 @@ func TestMatch(t *testing.T) {
 		{1.0, 2.0, false},
 		{Char('a'), Char('a'), true},
 		{Char('a'), 97.0, false},
-		{chars("ab"), chars("ab"), true},
-		{chars("ab"), chars("abc"), false},
-		{chars("ab"), Char('a'), false},
+		{Chars("ab"), Chars("ab"), true},
+		{Chars("ab"), Chars("abc"), false},
+		{Chars("ab"), Char('a'), false},
 		{Vector([]float64{1, 2}), Vector([]float64{1, 3}), false},
 		{nil, nil, false},
 	}
@@ -78,7 +69,7 @@ func TestAxisSplit(t *testing.T) {
 // Structural functions work on any element type.
 func TestGeneralStructural(t *testing.T) {
 	e := &env{io: 1, ct: defaultCT}
-	abc := chars("abc")
+	abc := Chars("abc")
 	check := func(name string, r *Array, err error, want string) {
 		t.Helper()
 		if err != nil {
@@ -88,33 +79,33 @@ func TestGeneralStructural(t *testing.T) {
 		}
 	}
 	r, err := reshape(e, Vector([]float64{2, 2}), abc)
-	check("2 2⍴'abc'", r, err, "a b\nc a")
-	r, err = reshape(e, Scalar(3), chars(""))
-	check("3⍴''", r, err, "     ")
+	check("2 2⍴'abc'", r, err, "ab\nca")
+	r, err = reshape(e, Scalar(3), Chars(""))
+	check("3⍴''", r, err, "   ")
 	if r.IsNumeric() {
 		t.Errorf("3⍴'' is numeric")
 	}
 	r, err = catenate(e, Scalar(1), abc)
-	check("1,'abc'", r, err, "1 a b c")
-	r, err = catenate(e, chars(""), Vector(nil))
+	check("1,'abc'", r, err, "1 abc")
+	r, err = catenate(e, Chars(""), Vector(nil))
 	if err != nil || r.IsNumeric() || r.Fill() != Char(' ') {
 		t.Errorf("'',⍳0: %+v", r)
 	}
 	r, err = ravel(e, &Array{Shape: []int{1, 3}, Elems: abc.Elems})
-	check(",1 3⍴'abc'", r, err, "a b c")
+	check(",1 3⍴'abc'", r, err, "abc")
 	r, err = index(e, abc, []*Array{Vector([]float64{3, 1})})
-	check("'abc'[3 1]", r, err, "c a")
+	check("'abc'[3 1]", r, err, "ca")
 	r, err = index(e, General([]int{2}, []Value{Char('a'), 5.0}, nil), []*Array{Scalar(2)})
 	if err != nil || !r.IsNumeric() {
 		t.Errorf("numeric item of a mixed vector: %+v %v", r, err)
 	}
-	_, err = index(e, abc, []*Array{chars("a")})
+	_, err = index(e, abc, []*Array{Chars("a")})
 	if e, ok := err.(*Error); !ok || e.Class != DomainError {
 		t.Errorf("character index: %v", err)
 	}
 	r, err = indexAssign(e, Vector([]float64{1, 2, 3}), []*Array{Scalar(2)}, Scalar(0).gather(nil, []int{0}))
 	check("numeric ← number", r, err, "1 0 3")
-	r, err = indexAssign(e, Vector([]float64{1, 2, 3}), []*Array{Scalar(2)}, chars("x").gather(nil, []int{0}))
+	r, err = indexAssign(e, Vector([]float64{1, 2, 3}), []*Array{Scalar(2)}, Chars("x").gather(nil, []int{0}))
 	check("numeric ← character", r, err, "1 x 3")
 	r, err = indexAssign(e, abc, []*Array{nil}, Scalar(7))
 	check("all ← number", r, err, "7 7 7")
@@ -122,12 +113,12 @@ func TestGeneralStructural(t *testing.T) {
 		t.Errorf("all-numeric result is general")
 	}
 	r, err = compress(e, Vector([]float64{1, 0, 2}), abc)
-	check("1 0 2/'abc'", r, err, "a c c")
+	check("1 0 2/'abc'", r, err, "acc")
 	r, err = compress(e, Scalar(2), abc.gather(nil, []int{0}))
-	check("2/'a'", r, err, "a a")
+	check("2/'a'", r, err, "aa")
 	r, err = compress(e, Scalar(1), Vector(nil))
 	check("1/⍳0", r, err, "")
-	r, err = indexOf(e, abc, chars("cz"))
+	r, err = indexOf(e, abc, Chars("cz"))
 	check("'abc'⍳'cz'", r, err, "3 4")
 	r, err = shapeOf(e, abc)
 	check("⍴'abc'", r, err, "3")
@@ -136,17 +127,17 @@ func TestGeneralStructural(t *testing.T) {
 // Numeric functions reject characters.
 func TestGeneralDomain(t *testing.T) {
 	e := &env{io: 1, ct: defaultCT}
-	abc := chars("abc")
+	abc := Chars("abc")
 	plus := scalarFns["+"]
 	_, e1 := applyMonad(e, plus.monad, abc)
-	_, e2 := applyDyad(e, plus.dyad, Scalar(1), abc)
+	_, e2 := applyDyad(e, plus, Scalar(1), abc)
 	_, e3 := reduce(e, "+", abc)
-	_, e4 := outer(e, plus.dyad, abc, Scalar(1))
-	_, e5 := outer(e, plus.dyad, Scalar(1), abc)
+	_, e4 := outer(e, plus, abc, Scalar(1))
+	_, e5 := outer(e, plus, Scalar(1), abc)
 	_, e6 := inner(e, "+", "×", abc, abc)
 	_, e7 := inner(e, "+", "×", Scalar(1), abc)
-	_, e8 := interval(e, chars("a"))
-	_, e9 := reshape(e, chars("a"), Scalar(1))
+	_, e8 := interval(e, Chars("a"))
+	_, e9 := reshape(e, Chars("a"), Scalar(1))
 	for i, err := range []error{e1, e2, e3, e4, e5, e6, e7, e8, e9} {
 		if e, ok := err.(*Error); !ok || e.Class != DomainError {
 			t.Errorf("case %d: got %v", i+1, err)
@@ -159,8 +150,8 @@ func TestFormatGeneral(t *testing.T) {
 	if got := Format(m); got != "a 10\nb  c" {
 		t.Errorf("got %q", got)
 	}
-	n := General(nil, []Value{chars("ab")}, nil)
-	if got := Format(n); got != "a b" {
+	n := General(nil, []Value{Chars("ab")}, nil)
+	if got := Format(n); got != "ab" {
 		t.Errorf("nested: %q", got)
 	}
 	if got := formatElem(nil, defaultPP); got != "?" {

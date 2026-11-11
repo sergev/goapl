@@ -87,9 +87,26 @@ different.
 5
 ```
 
+## Strings
+
+Characters between quotes form a character vector. A quote inside is
+written twice. A single character in quotes is a scalar.
+
+```apl
+      'HELLO, WORLD'
+HELLO, WORLD
+      'IT''S'
+IT'S
+      ⍴'ABC'
+3
+      ⍴'A'
+
+```
+
 ## Comments
 
-`⍝` starts a comment; the rest of the line is ignored.
+`⍝` starts a comment; the rest of the line is ignored. A `⍝` inside
+quotes is an ordinary character.
 
 ```apl
       1+2   ⍝ three
@@ -127,14 +144,17 @@ different.
 | `[ ; ]` | indexing |
 | `( )` | grouping |
 | `⎕` | input and output; starts system variable names |
+| `⍞` | character input and output |
+| `' '` | string |
 | `∇` | function definition |
 | `:` | label |
 | `⍝` | comment |
 
 # Arrays
 
-All data are arrays of numbers. An array has a *shape*, the list of its
-lengths along each axis, and a *rank*, the number of axes.
+All data are arrays. An element of an array is a number or a character.
+An array has a *shape*, the list of its lengths along each axis, and a
+*rank*, the number of axes.
 
 | Rank | Name | Example |
 |:--|:--|:--|
@@ -166,6 +186,20 @@ not matter.
 
 *Boolean* values are 0 and 1. Functions that need booleans (`~ ∧ ∨`)
 reject other numbers.
+
+An array may mix numbers and characters. Arithmetic needs numbers;
+structural functions and indexing take any elements.
+
+```apl
+      1,'AB',2
+1 AB 2
+      'ABCDE'[2 4]
+BD
+```
+
+The *fill element* of an array is 0 if its first element is a number,
+and a blank if it is a character. An empty array keeps the fill element
+of the array it was made from. `A⍴B` fills with it when B is empty.
 
 # Evaluation
 
@@ -362,7 +396,8 @@ of B to the base A.
 ## Comparisons
 
 `= ≠ < ≤ ≥ >` give 1 if the relation holds, else 0. They have no
-monadic form.
+monadic form. `=` and `≠` also compare characters; a character is never
+equal to a number. The others need numbers.
 
 ```apl
       1 2 3=2
@@ -377,6 +412,10 @@ monadic form.
 0 1 1
       1 2 3>2
 0 0 1
+      'ABCA'='A'
+1 0 0 1
+      'A'=65
+0
 ```
 
 ## Logical functions
@@ -434,8 +473,8 @@ The lengths of the axes of X, as a vector. A scalar has shape `⍳0`.
 ## Reshape `A⍴B`
 
 An array of shape A filled with the elements of B in order, repeated as
-needed. If B is empty, the result is filled with zeros. A is a scalar or
-vector of non-negative integers.
+needed. If B is empty, the result is filled with its fill element: 0 or
+blank. A is a scalar or vector of non-negative integers.
 
 ```apl
       2 3⍴1 2
@@ -445,6 +484,9 @@ vector of non-negative integers.
 7 7 7 7 7
       3⍴⍳0
 0 0 0
+      2 5⍴'HELLO'
+HELLO
+HELLO
 ```
 
 ## Ravel `,X`
@@ -703,6 +745,18 @@ array prints an empty line.
 7 8
 ```
 
+Characters are printed as they are, with no blanks between them. In a
+mixed array, numbers are set off from their neighbors by a blank.
+
+```apl
+      2 3⍴'ABCDEF'
+ABC
+DEF
+      2 3⍴'A',10,'B'
+A 10 B
+A 10 B
+```
+
 ## Output with `⎕←X`
 
 `⎕←X` prints X and has the value X, so it shows intermediate results.
@@ -725,6 +779,23 @@ is asked for again.
       2×⍳3
       X
 2 4 6
+```
+
+## Character input and output with `⍞`
+
+`⍞←X` prints X without ending the line. `⍞` reads a line and gives it
+as a character vector, with no evaluation; output of `⍞←` on the same
+line serves as a prompt. Lines read by `⍞` have no indent.
+
+```text
+      ∇R←ASK P
+[1] ⍞←P
+[2] R←⍞
+[3] ∇
+      N←ASK 'NAME? '
+NAME? JOHN SMITH
+      ⍴N
+10
 ```
 
 # System variables
@@ -1076,8 +1147,10 @@ expr       := fn expr
             | name ← expr
             | name [ index ] ← expr
             | ⎕ ← expr
+            | ⍞ ← expr
             | operand [ fn expr ]
-operand    := ( number... | name | niladic-fn | ⎕ | ( expr ) ) { [ index ] }
+operand    := ( number... | 'string' | name | niladic-fn | ⎕ | ⍞ | ( expr ) )
+              { [ index ] }
 index      := [ expr ] { ; [ expr ] }
 fn         := primitive | primitive / | primitive . primitive
             | ∘ . primitive | user-fn

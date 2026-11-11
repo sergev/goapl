@@ -43,6 +43,15 @@
       abc←7
       abc
 7
+      ⍝ Strings: a quote inside is doubled
+      'ABC'
+ABC
+      'IT''S'
+IT'S
+      ''''
+'
+      ⍴''
+0
       ⍝ Comments
       1+2 ⍝ trailing comment
 3
@@ -69,9 +78,9 @@ SYNTAX ERROR
 SYNTAX ERROR
 1 # 2
   ^
-      'A'
+      'ABC
 SYNTAX ERROR
-'A'
+'ABC
 ^
       1E
 SYNTAX ERROR

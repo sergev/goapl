@@ -5,7 +5,8 @@ package apl
 //	stmt    := → expr | expr
 //	expr    := fn expr | name ← expr | name [index] ← expr | ⎕ ← expr
 //	         | operand [fn expr]
-//	operand := (number | name | niladic | ⎕ | ( expr )) {[index]}
+//	         | ⍞ ← expr
+//	operand := (number | string | name | niladic | ⎕ | ⍞ | ( expr )) {[index]}
 //	index   := [expr] {; [expr]}
 //	fn      := prim | prim / | prim . prim | ∘ . prim | user function
 
@@ -45,10 +46,14 @@ type callNode struct { // niladic user function
 	at int
 }
 
-type quadInNode struct{ at int }
-
-type quadOutNode struct {
+type quadInNode struct { // ⎕ or ⍞ input
 	at    int
+	quote bool // ⍞
+}
+
+type quadOutNode struct { // ⎕← or ⍞← output
+	at    int
+	quote bool // ⍞
 	right node
 }
 
@@ -229,13 +234,13 @@ func (p *parser) expr() (node, error) {
 		}
 		return &monadNode{fn: f, right: r}, nil
 	}
-	if next, ok := p.peekAt(1); ok && isSpecial(t, "⎕") && isSpecial(next, "←") {
+	if next, ok := p.peekAt(1); ok && (isSpecial(t, "⎕") || isSpecial(t, "⍞")) && isSpecial(next, "←") {
 		p.i += 2
 		r, err := p.expr()
 		if err != nil {
 			return nil, err
 		}
-		return &quadOutNode{at: t.Pos, right: r}, nil
+		return &quadOutNode{at: t.Pos, quote: t.Text == "⍞", right: r}, nil
 	}
 	if t.Kind == Name && p.userFn(t) == nil && p.indexAssignAhead() {
 		p.i += 2 // name [
@@ -385,15 +390,22 @@ func (p *parser) primary() (node, error) {
 			v = Scalar(t.Nums[0])
 		}
 		return &constNode{val: v, at: t.Pos}, nil
+	case t.Kind == String:
+		p.i++
+		v := Chars(t.Text)
+		if v.Size() == 1 {
+			v.Shape = nil
+		}
+		return &constNode{val: v, at: t.Pos}, nil
 	case t.Kind == Name:
 		p.i++
 		if f := p.userFn(t); f != nil { // niladic; others are taken by atFn
 			return &callNode{fn: f, at: t.Pos}, nil
 		}
 		return &varNode{name: t.Text, at: t.Pos}, nil
-	case isSpecial(t, "⎕"):
+	case isSpecial(t, "⎕") || isSpecial(t, "⍞"):
 		p.i++
-		return &quadInNode{at: t.Pos}, nil
+		return &quadInNode{at: t.Pos, quote: t.Text == "⍞"}, nil
 	case isSpecial(t, "("):
 		p.i++
 		n, err := p.expr()

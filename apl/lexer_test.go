@@ -30,6 +30,8 @@ func TestLex(t *testing.T) {
 		{"1 2∘.×3", "NUM(1 2) SPEC(∘) SPEC(.) PRIM(×) NUM(3)"},
 		{"⎕←X", "SPEC(⎕) SPEC(←) NAME(X)"},
 		{"⎕IO←⎕ X", "NAME(⎕IO) SPEC(←) SPEC(⎕) NAME(X)"},
+		{"'AB''C',''", "STR(AB'C) PRIM(,) STR()"},
+		{"⍞←'⍝'", "SPEC(⍞) SPEC(←) STR(⍝)"},
 		{"LongName_∆1←x", "NAME(LongName_∆1) SPEC(←) NAME(x)"},
 	}
 	for _, c := range cases {
@@ -48,6 +50,8 @@ func TestLexErrors(t *testing.T) {
 		{"¯A", SyntaxError, 1},
 		{"1.+2", SyntaxError, 2},
 		{"1 # 2", SyntaxError, 2},
+		{"1,'AB", SyntaxError, 2},
+		{"'AB''", SyntaxError, 0},
 	}
 	for _, c := range cases {
 		_, err := Lex(c.in)

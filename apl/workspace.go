@@ -20,6 +20,7 @@ type Interp struct {
 	Prompt   string         // printed before each input line
 	Echo     bool           // copy input lines to output, for transcripts
 	Color    bool           // use ANSI colors in output
+	pending  bool           // ⍞ output left a line unfinished
 }
 
 // New returns an interpreter writing to out.
@@ -64,8 +65,47 @@ func withSrc(err error, src string) error {
 }
 
 func (in *Interp) print(v *Array) error {
+	in.endLine()
 	_, err := fmt.Fprintln(in.out, in.paint(styleResult, format(v, in.pp)))
 	return err
+}
+
+// endLine finishes a line left open by ⍞ output.
+func (in *Interp) endLine() {
+	if in.pending {
+		fmt.Fprintln(in.out)
+		in.pending = false
+	}
+}
+
+// quoteOutput is ⍞←X: prints X without ending the line.
+func (in *Interp) quoteOutput(v *Array) error {
+	s := format(v, in.pp)
+	if s == "" {
+		return nil
+	}
+	in.endLine()
+	_, err := fmt.Fprint(in.out, in.paint(styleResult, s))
+	in.pending = true
+	return err
+}
+
+// quoteInput is ⍞: reads a line as a character vector. Any ⍞ output
+// on the same line serves as the prompt.
+func (in *Interp) quoteInput() (*Array, error) {
+	if in.input == nil || !in.input.Scan() {
+		in.endLine()
+		return nil, newError(Interrupt)
+	}
+	line := in.input.Text()
+	switch {
+	case in.Echo:
+		fmt.Fprintln(in.out, line)
+		in.pending = false
+	case in.Prompt != "":
+		in.pending = false // the terminal echoed the line
+	}
+	return Chars(line), nil
 }
 
 // getVar returns the value of a variable or system variable.
@@ -95,13 +135,16 @@ func (in *Interp) Run(r io.Reader) {
 			in.prompt()
 		}
 		if !in.input.Scan() {
+			in.endLine()
 			return
 		}
 		line := in.input.Text()
 		if in.Echo {
+			in.endLine()
 			fmt.Fprintln(in.out, strings.TrimRight(in.promptText()+line, " "))
 		}
 		if strings.HasPrefix(strings.TrimSpace(line), "/*") {
+			in.endLine()
 			return
 		}
 		if err := in.Exec(line); err != nil {
@@ -111,6 +154,7 @@ func (in *Interp) Run(r io.Reader) {
 }
 
 func (in *Interp) prompt() {
+	in.endLine()
 	p := in.promptText()
 	if in.defining != nil {
 		p = in.paint(stylePrompt, p)
@@ -129,6 +173,7 @@ func (in *Interp) promptText() string {
 // quadInput reads and evaluates a line for ⎕, prompting again on error.
 func (in *Interp) quadInput() (*Array, error) {
 	for {
+		in.endLine()
 		fmt.Fprintln(in.out, in.paint(stylePrompt, "⎕:"))
 		if in.input == nil || !in.input.Scan() {
 			return nil, newError(Interrupt)
@@ -159,6 +204,7 @@ func (in *Interp) quadInput() (*Array, error) {
 
 // report prints an error message, then the line with a caret, like SError.
 func (in *Interp) report(err error) {
+	in.endLine()
 	fmt.Fprintln(in.out, in.paint(styleError, err.Error()))
 	e, ok := err.(*Error)
 	if !ok || e.Src == "" {

@@ -6,9 +6,11 @@ type monadFn func(e *env, x float64) (float64, error)
 type dyadFn func(e *env, a, b float64) (float64, error)
 
 // scalarFn is a pervasive primitive; nil entries mean no such valence.
+// dyad applies to numbers; any, if set, to other elements.
 type scalarFn struct {
 	monad monadFn
 	dyad  dyadFn
+	any   func(e *env, a, b Value) Value
 }
 
 var scalarFns = map[string]*scalarFn{
@@ -74,8 +76,14 @@ var scalarFns = map[string]*scalarFn{
 		},
 		dyad: logBase,
 	},
-	"=": {dyad: compare(func(a, b, ct float64) bool { return tolEq(a, b, ct) })},
-	"≠": {dyad: compare(func(a, b, ct float64) bool { return !tolEq(a, b, ct) })},
+	"=": {
+		dyad: compare(func(a, b, ct float64) bool { return tolEq(a, b, ct) }),
+		any:  func(e *env, a, b Value) Value { return boolVal(match(a, b, e.ct)) },
+	},
+	"≠": {
+		dyad: compare(func(a, b, ct float64) bool { return !tolEq(a, b, ct) }),
+		any:  func(e *env, a, b Value) Value { return boolVal(!match(a, b, e.ct)) },
+	},
 	"<": {dyad: compare(func(a, b, ct float64) bool { return a < b && !tolEq(a, b, ct) })},
 	"≤": {dyad: compare(func(a, b, ct float64) bool { return a < b || tolEq(a, b, ct) })},
 	"≥": {dyad: compare(func(a, b, ct float64) bool { return a > b || tolEq(a, b, ct) })},
@@ -197,11 +205,21 @@ func applyMonad(e *env, f monadFn, x *Array) (*Array, error) {
 	return r, nil
 }
 
-// applyDyad applies f elementwise with scalar (or one-element) extension.
-func applyDyad(e *env, f dyadFn, a, b *Array) (*Array, error) {
-	if !a.IsNumeric() || !b.IsNumeric() {
-		return nil, newError(DomainError)
+// elem applies the dyadic form to two elements of any type.
+func (sf *scalarFn) elem(e *env, x, y Value) (Value, error) {
+	a, ok1 := x.(float64)
+	b, ok2 := y.(float64)
+	switch {
+	case ok1 && ok2:
+		return sf.dyad(e, a, b)
+	case sf.any != nil:
+		return sf.any(e, x, y), nil
 	}
+	return nil, newError(DomainError)
+}
+
+// applyDyad applies sf elementwise with scalar (or one-element) extension.
+func applyDyad(e *env, sf *scalarFn, a, b *Array) (*Array, error) {
 	var shape []int
 	switch {
 	case sameShape(a, b):
@@ -216,21 +234,36 @@ func applyDyad(e *env, f dyadFn, a, b *Array) (*Array, error) {
 		return nil, newError(LengthError)
 	}
 	n := shapeSize(shape)
-	r := &Array{Shape: shape, Data: make([]float64, n)}
+	ai := func(i int) int {
+		if a.Size() == 1 {
+			return 0
+		}
+		return i
+	}
+	bi := func(i int) int {
+		if b.Size() == 1 {
+			return 0
+		}
+		return i
+	}
+	if a.IsNumeric() && b.IsNumeric() {
+		r := &Array{Shape: shape, Data: make([]float64, n)}
+		for i := range n {
+			v, err := sf.dyad(e, a.Data[ai(i)], b.Data[bi(i)])
+			if err != nil {
+				return nil, err
+			}
+			r.Data[i] = v
+		}
+		return r, nil
+	}
+	r := make([]Value, n)
 	for i := range n {
-		x := a.Data[0]
-		if a.Size() > 1 {
-			x = a.Data[i]
-		}
-		y := b.Data[0]
-		if b.Size() > 1 {
-			y = b.Data[i]
-		}
-		v, err := f(e, x, y)
+		v, err := sf.elem(e, a.At(ai(i)), b.At(bi(i)))
 		if err != nil {
 			return nil, err
 		}
-		r.Data[i] = v
+		r[i] = v
 	}
-	return r, nil
+	return General(shape, r, nil), nil
 }

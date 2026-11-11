@@ -22,6 +22,15 @@ func Scalar(v float64) *Array { return &Array{Data: []float64{v}} }
 // Vector returns a numeric rank-1 array holding v.
 func Vector(v []float64) *Array { return &Array{Shape: []int{len(v)}, Data: v} }
 
+// Chars returns a character vector.
+func Chars(s string) *Array {
+	e := []Value{}
+	for _, c := range s {
+		e = append(e, Char(c))
+	}
+	return &Array{Shape: []int{len(e)}, Elems: e, Proto: Char(' ')}
+}
+
 // General returns an array of elems, numeric if they all are numbers.
 // proto is the prototype used when elems is empty.
 func General(shape []int, elems []Value, proto Value) *Array {

@@ -14,14 +14,15 @@ const (
 	Number  Kind = iota // numeric vector constant
 	Name                // identifier
 	Prim                // primitive function or operator glyph
-	Special             // ← → ∇ ⎕ ( ) [ ] ; : . ∘
+	Special             // ← → ∇ ⎕ ⍞ ( ) [ ] ; : . ∘
+	String              // character constant
 )
 
 // Token is a lexical unit of an APL line.
 type Token struct {
 	Kind Kind
 	Pos  int       // rune offset in line
-	Text string    // name or glyph
+	Text string    // name, glyph or characters of a string
 	Nums []float64 // values for Number
 }
 
@@ -37,13 +38,15 @@ func (t Token) String() string {
 		return "NAME(" + t.Text + ")"
 	case Prim:
 		return "PRIM(" + t.Text + ")"
+	case String:
+		return "STR(" + t.Text + ")"
 	}
 	return "SPEC(" + t.Text + ")"
 }
 
 const (
 	primGlyphs    = "+-×÷*⍳⍴,~=≠<≤≥>∧∨⌈⌊○/\\?↑↓⊥⊤|ε∊⌽⊖⍉⍋⍒!⍟"
-	specialGlyphs = "←→∇⎕()[];:.∘"
+	specialGlyphs = "←→∇⎕⍞()[];:.∘"
 )
 
 // Lex splits a line into tokens.
@@ -58,6 +61,25 @@ func Lex(line string) ([]Token, error) {
 			i++
 		case c == '⍝':
 			i = len(src) // comment
+		case c == '\'':
+			start := i
+			var b strings.Builder
+			for {
+				i++
+				if i >= len(src) {
+					return nil, errorAt(SyntaxError, start)
+				}
+				if src[i] == '\'' {
+					if i+1 < len(src) && src[i+1] == '\'' {
+						i++ // doubled quote
+					} else {
+						break
+					}
+				}
+				b.WriteRune(src[i])
+			}
+			i++
+			toks = append(toks, Token{Kind: String, Pos: start, Text: b.String()})
 		case isDigit(c) || c == '¯' || (c == '.' && i+1 < len(src) && isDigit(src[i+1])):
 			start := i
 			var nums []float64

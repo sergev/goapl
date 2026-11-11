@@ -8,16 +8,7 @@ one), README updates, and `make test` and `make compare` passing.
 Already done: `⍝` comments; `⌈ ⌊ | ⍟` monadic and dyadic; compress `A/B`;
 APL2 error classes and behavior where the original differs (T1);
 arrays of any rank with general (character, mixed, nested) elements (T2);
-`⎕IO ⎕CT ⎕PP ⎕RL` (T3).
-
-## T4. Characters
-
-- Quoted strings `'ABC'`, `''''` for a quote; a one-character string is
-  a scalar.
-- Display of character arrays and of mixed numbers and characters.
-- `=` `≠` on characters; other scalar functions give an error.
-- Structural functions and indexing on characters.
-- `⍞` character input and output.
+`⎕IO ⎕CT ⎕PP ⎕RL` (T3); characters, strings and `⍞` (T4).
 
 ## T5. Remaining scalar functions
 

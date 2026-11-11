@@ -19,11 +19,17 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 		r, err := in.call(n.fn, nil, nil)
 		return r, setPos(err, n.at)
 	case *quadInNode:
+		if n.quote {
+			return in.quoteInput()
+		}
 		return in.quadInput()
 	case *quadOutNode:
 		v, err := in.eval(n.right)
 		if err != nil {
 			return nil, err
+		}
+		if n.quote {
+			return v, in.quoteOutput(v)
 		}
 		return v, in.print(v)
 	case *constNode:
@@ -187,13 +193,13 @@ func (in *Interp) dyad(f *fnNode, a, b *Array) (*Array, error) {
 	case fnInner:
 		return inner(&in.env, f.glyph, f.g, a, b)
 	case fnOuter:
-		return outer(&in.env, scalarFns[f.glyph].dyad, a, b)
+		return outer(&in.env, scalarFns[f.glyph], a, b)
 	}
 	if sf := scalarFns[f.glyph]; sf != nil {
 		if sf.dyad == nil {
 			return nil, newError(ValenceError)
 		}
-		return applyDyad(&in.env, sf.dyad, a, b)
+		return applyDyad(&in.env, sf, a, b)
 	}
 	if sf := structFns[f.glyph]; sf != nil {
 		if sf.dyad == nil {

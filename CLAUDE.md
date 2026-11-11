@@ -39,7 +39,8 @@ Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
   empty, its prototype in `Proto`. Build general arrays with `General`,
   which falls back to numeric when it can; `gather` selects elements for
   structural functions, `numeric` gives DOMAIN ERROR for general arrays,
-  `axisSplit` views an array as frames along an axis. Arrays are
+  `axisSplit` views an array as frames along an axis. `format`
+  prints characters touching and numbers set off by blanks. Arrays are
   immutable once built; indexed assignment copies.
 - **Parser**: recursive descent read left to right that yields APL's
   right-to-left binding; grammar is in the comment at the top of

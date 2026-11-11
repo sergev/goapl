@@ -26,6 +26,11 @@ LongVariableName←8
 LongVariableName
 abc←7
 abc
+⍝ Strings: a quote inside is doubled
+'ABC'
+'IT''S'
+''''
+⍴''
 ⍝ Comments
 1+2 ⍝ trailing comment
 ⍝ Empty lines are ignored
@@ -36,5 +41,5 @@ abc
 1.
 1.+2
 1 # 2
-'A'
+'ABC
 1E

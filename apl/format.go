@@ -52,26 +52,32 @@ func Format(a *Array) string { return format(a, defaultPP) }
 
 // format renders an array as display lines with pp significant digits.
 // Rows of a matrix are lines; each axis before the last two separates
-// its planes by one more blank line.
+// its planes by one more blank line. Columns holding numbers are
+// right-aligned and set off by a blank; adjacent character columns
+// touch.
 func format(a *Array, pp int) string {
 	r := a.Rank()
-	switch r {
-	case 0:
+	if r == 0 {
 		return formatElem(a.At(0), pp)
-	case 1:
-		s := make([]string, a.Size())
-		for i := range s {
-			s[i] = formatElem(a.At(i), pp)
-		}
-		return strings.Join(s, " ")
 	}
 	cols := a.Shape[r-1]
 	rows := shapeSize(a.Shape[:r-1])
+	if r == 1 {
+		cols, rows = 1, 1
+	}
+	if r == 1 && a.Size() > 0 {
+		cols = a.Size()
+	}
 	cells := make([]string, a.Size())
 	width := make([]int, cols)
+	numeric := make([]bool, cols)
 	for i := range cells {
-		cells[i] = formatElem(a.At(i), pp)
+		v := a.At(i)
+		cells[i] = formatElem(v, pp)
 		width[i%cols] = max(width[i%cols], len([]rune(cells[i])))
+		if _, ok := v.(Char); !ok {
+			numeric[i%cols] = true
+		}
 	}
 	var b strings.Builder
 	for row := range rows {
@@ -83,12 +89,16 @@ func format(a *Array, pp int) string {
 				}
 			}
 		}
-		line := make([]string, cols)
-		for c := range cols {
-			s := cells[row*cols+c]
-			line[c] = strings.Repeat(" ", width[c]-len([]rune(s))) + s
+		if a.Size() == 0 {
+			continue
 		}
-		b.WriteString(strings.Join(line, " "))
+		for c := range cols {
+			if c > 0 && (numeric[c] || numeric[c-1]) {
+				b.WriteByte(' ')
+			}
+			s := cells[row*cols+c]
+			b.WriteString(strings.Repeat(" ", width[c]-len([]rune(s))) + s)
+		}
 	}
 	return b.String()
 }
