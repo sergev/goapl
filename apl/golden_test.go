@@ -25,7 +25,10 @@ func TestGolden(t *testing.T) {
 			}
 			defer f.Close()
 			var out bytes.Buffer
-			New(&out).Run(f)
+			in := New(&out)
+			in.Prompt = "      "
+			in.Echo = true
+			in.Run(f)
 			want := strings.TrimSuffix(src, ".apl") + ".out"
 			if *update {
 				if err := os.WriteFile(want, out.Bytes(), 0o644); err != nil {

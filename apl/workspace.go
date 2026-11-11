@@ -17,6 +17,7 @@ type Interp struct {
 	out      io.Writer
 	input    *bufio.Scanner // source of ⎕ input
 	Prompt   string         // printed before each input line
+	Echo     bool           // copy input lines to output, for transcripts
 }
 
 // New returns an interpreter writing to out.
@@ -60,9 +61,6 @@ func withSrc(err error, src string) error {
 }
 
 func (in *Interp) print(v *Array) error {
-	if v.Rank() > MaxRank {
-		return newError(60)
-	}
 	_, err := fmt.Fprintln(in.out, Format(v))
 	return err
 }
@@ -72,11 +70,16 @@ func (in *Interp) print(v *Array) error {
 func (in *Interp) Run(r io.Reader) {
 	in.input = bufio.NewScanner(r)
 	for {
-		in.prompt()
+		if !in.Echo {
+			in.prompt()
+		}
 		if !in.input.Scan() {
 			return
 		}
 		line := in.input.Text()
+		if in.Echo {
+			fmt.Fprintln(in.out, strings.TrimRight(in.promptText()+line, " "))
+		}
 		if strings.HasPrefix(strings.TrimSpace(line), "/*") {
 			return
 		}
@@ -86,15 +89,14 @@ func (in *Interp) Run(r io.Reader) {
 	}
 }
 
-func (in *Interp) prompt() {
-	if in.Prompt == "" {
-		return
+func (in *Interp) prompt() { fmt.Fprint(in.out, in.promptText()) }
+
+// promptText is the prompt, or "[n] " while defining a function.
+func (in *Interp) promptText() string {
+	if in.Prompt != "" && in.defining != nil {
+		return fmt.Sprintf("[%d] ", len(in.defining.Stmts)+1)
 	}
-	if in.defining != nil {
-		fmt.Fprintf(in.out, "[%d] ", len(in.defining.Stmts)+1)
-		return
-	}
-	fmt.Fprint(in.out, in.Prompt)
+	return in.Prompt
 }
 
 // quadInput reads and evaluates a line for ⎕, prompting again on error.
@@ -105,6 +107,9 @@ func (in *Interp) quadInput() (*Array, error) {
 			return nil, newError(18)
 		}
 		line := in.input.Text()
+		if in.Echo {
+			fmt.Fprintln(in.out, strings.TrimRight(in.Prompt+line, " "))
+		}
 		toks, err := Lex(line)
 		if err == nil && len(toks) == 0 {
 			continue

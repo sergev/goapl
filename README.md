@@ -52,7 +52,7 @@ session, as in the original.
 | Functions | `∇` definitions: niladic, monadic, dyadic, with or without explicit result |
 
 Data are floating-point arrays of rank 0 to 3. Errors use the numbered
-messages of the original `APLfile`. Comparisons use a tolerance of 1E¯13.
+messages of the original `APLfile`, in sentence case. `⍝` starts a comment. Comparisons use a tolerance of 1E¯13.
 Indexing is more general than in the original: indices may be arrays
 (`V[2 4]`, `M[1 3;]`) and an axis may be elided (`M[;2]`); the original
 accepted scalar indices only. Output uses conventional APL notation (10 significant digits, `¯` for
@@ -97,8 +97,13 @@ R←R×I
 
 ## Tests
 
-`make test` runs unit tests and golden tests: each `testdata/*.apl` script
-is run and its output compared with the matching `.out` file.
+`make test` runs unit tests and golden tests. Each `testdata/*.apl` script
+covers one area of the language (lexical rules, monadic and dyadic
+functions, reduction, structural functions, products, indexing, syntax,
+user functions, `⎕`, output format, edge cases), with `⍝` comments saying
+what each group checks. It is run as an interactive session, and the
+transcript (input after the prompt, then output) is compared with the
+matching `.out` file.
 `apl/parity_test.go` ports every case of the prototype's
 `tests/run_symbol_tests.py`, covering all 89 glyphs of its character set;
 the few deliberate differences are marked there.

@@ -1,0 +1,80 @@
+      ⍝ Numbers
+      0
+0
+      42
+42
+      ¯7
+¯7
+      3.25
+3.25
+      .5
+0.5
+      ¯.5
+¯0.5
+      0.001
+0.001
+      1E3
+1000
+      1.5E¯2
+0.015
+      ¯2E2
+¯200
+      ⍝ Vectors are numbers separated by spaces
+      1 2 3
+1 2 3
+      ¯1 0 1
+¯1 0 1
+      1   2    3
+1 2 3
+      ⍝ Names: letters, digits, ∆ and _; up to 10 characters
+      A←1
+      ABC←2
+      A1B2←3
+      ∆X←4
+      X_Y←5
+      A+ABC+A1B2+∆X+X_Y
+15
+      ABCDEFGHIJ←6
+      ABCDEFGHIJ
+6
+      abc←7
+      abc
+7
+      ⍝ Comments
+      1+2 ⍝ trailing comment
+3
+      ⍝ Empty lines are ignored
+
+      ⍝ Lexical errors
+      ¯A
+Invalid character follows negative sign
+¯A
+ ↑
+      ¯
+Invalid character follows negative sign
+¯
+ ↑
+      1.
+Digit must follow a decimal point
+1.
+  ↑
+      1.+2
+Digit must follow a decimal point
+1.+2
+  ↑
+      1 # 2
+Invalid character encountered
+1 # 2
+  ↑
+      'A'
+Invalid character encountered
+'A'
+↑
+      ABCDEFGHIJK←1
+Identifier too long
+ABCDEFGHIJK←1
+↑
+      1E
+Invalid expression
+1E
+ ↑

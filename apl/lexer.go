@@ -59,6 +59,8 @@ func Lex(line string) ([]Token, error) {
 		switch {
 		case c == ' ' || c == '\t':
 			i++
+		case c == '⍝':
+			i = len(src) // comment
 		case isDigit(c) || c == '¯' || (c == '.' && i+1 < len(src) && isDigit(src[i+1])):
 			start := i
 			var nums []float64

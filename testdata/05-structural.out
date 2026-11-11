@@ -1,0 +1,155 @@
+      ⍝ Index generator
+      ⍳5
+1 2 3 4 5
+      ⍳1
+1
+      ⍳0
+
+      ⍴⍳0
+0
+      ⍳,3
+1 2 3
+      ⍝ Shape
+      ⍴5
+
+      ⍴⍴5
+0
+      ⍴1 2 3
+3
+      ⍴2 3⍴⍳6
+2 3
+      ⍴2 3 4⍴⍳24
+2 3 4
+      ⍝ Reshape cycles the data
+      2 3⍴⍳6
+1 2 3
+4 5 6
+      2 3⍴1 2
+1 2 1
+2 1 2
+      3⍴5
+5 5 5
+      2 2 2⍴⍳8
+1 2
+3 4
+
+5 6
+7 8
+      (,4)⍴1 2
+1 2 1 2
+      0⍴1 2
+
+      ⍴0 3⍴1
+0 3
+      ⍝ Empty data fills with zeros
+      3⍴⍳0
+0 0 0
+      ⍝ Ravel
+      ,5
+5
+      ,1 2 3
+1 2 3
+      ,2 2⍴⍳4
+1 2 3 4
+      ⍴,2 3 4⍴1
+24
+      ⍝ Index of
+      10 20 30⍳20
+2
+      10 20 30⍳40
+4
+      10 20 30⍳2 2⍴10 40 30 20
+1 4
+3 2
+      1 2 1⍳1
+1
+      (⍳0)⍳1
+1
+      ⍝ Catenate
+      1 2,3 4
+1 2 3 4
+      1,2 3
+1 2 3
+      1 2,3
+1 2 3
+      1,2
+1 2
+      (⍳0),1
+1
+      ⍝ Compress and replicate (goapl addition)
+      1 0 1/1 2 3
+1 3
+      1/5
+5
+      0 1/2 3
+3
+      2 0 1/1 2 3
+1 1 3
+      3/7
+7 7 7
+      ⍴0/5
+0
+      1 0 1/2 3⍴⍳6
+1 3
+4 6
+      ⍝ Errors
+      ⍳1 2
+Argument not a scalar
+⍳1 2
+↑
+      ⍳¯1
+Argument is negative
+⍳¯1
+↑
+      ⍳2.5
+Argument is not an integer
+⍳2.5
+↑
+      (2 2⍴1)⍴5
+Left argument not a vector
+(2 2⍴1)⍴5
+       ↑
+      2 2 2 2⍴1
+Greater than three dimensions
+2 2 2 2⍴1
+       ↑
+      ¯1⍴5
+Argument is negative
+¯1⍴5
+  ↑
+      1.5⍴5
+Argument is not an integer
+1.5⍴5
+   ↑
+      (2 2⍴1)⍳1
+Left argument is not a vector
+(2 2⍴1)⍳1
+       ↑
+      5⍳1
+Left argument is not a vector
+5⍳1
+ ↑
+      (2 2⍴1),1
+Argument(s) with rank greater than one
+(2 2⍴1),1
+       ↑
+      1,2 2⍴1
+Argument(s) with rank greater than one
+1,2 2⍴1
+ ↑
+      1 0/1 2 3
+Args. incompatible for dyadic operation
+1 0/1 2 3
+   ↑
+      ¯1/1
+Argument is negative
+¯1/1
+  ↑
+      0.5/1
+Argument is not an integer
+0.5/1
+   ↑
+      (2 2⍴1)/1 2
+Left argument is not a vector
+(2 2⍴1)/1 2
+       ↑

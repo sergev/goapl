@@ -16,7 +16,8 @@ func (in *Interp) eval(n node) (*Array, error) {
 func (in *Interp) evalNode(n node) (*Array, error) {
 	switch n := n.(type) {
 	case *callNode:
-		return in.call(n.fn, nil, nil)
+		r, err := in.call(n.fn, nil, nil)
+		return r, setPos(err, n.at)
 	case *quadInNode:
 		return in.quadInput()
 	case *quadOutNode:
@@ -76,7 +77,8 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 			return nil, err
 		}
 		if n.fn.kind == fnUser {
-			return in.call(n.fn.user, nil, x)
+			r, err := in.call(n.fn.user, nil, x)
+			return r, setPos(err, n.fn.at)
 		}
 		r, err := monad(n.fn, x)
 		return r, setPos(err, n.fn.at)
@@ -90,7 +92,8 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 			return nil, err
 		}
 		if n.fn.kind == fnUser {
-			return in.call(n.fn.user, a, b)
+			r, err := in.call(n.fn.user, a, b)
+			return r, setPos(err, n.fn.at)
 		}
 		r, err := dyad(n.fn, a, b)
 		return r, setPos(err, n.fn.at)
@@ -145,9 +148,9 @@ func (in *Interp) evalIndex(items []node) ([]*Array, error) {
 	return idx, nil
 }
 
-// setPos attaches a position to a positionless error.
+// setPos attaches a position to an error not yet located in a line.
 func setPos(err error, pos int) error {
-	if e, ok := err.(*Error); ok && e.Pos == NoPos {
+	if e, ok := err.(*Error); ok && e.Pos == NoPos && e.Src == "" {
 		e.Pos = pos
 	}
 	return err

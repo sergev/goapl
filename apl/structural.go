@@ -212,9 +212,6 @@ func compress(a, b *Array) (*Array, error) {
 		}
 		counts[i] = c
 	}
-	if a.Size() == 0 && n != 0 {
-		return nil, newError(55)
-	}
 	total := 0
 	for _, c := range counts {
 		total += c

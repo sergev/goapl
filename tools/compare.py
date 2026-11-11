@@ -41,6 +41,7 @@ def encode(text, bytemap):
 
 
 def found(out, messages):
+    out = out.upper()
     return sorted(m for m in messages if m in out)
 
 

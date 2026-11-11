@@ -110,7 +110,7 @@ func (in *Interp) defineLine(line string) error {
 		}
 		line = line[:end]
 	}
-	if len(toks) > 0 {
+	if len(toks) > 0 || strings.Contains(line, "⍝") {
 		st := &stmt{text: line, toks: toks}
 		if len(toks) >= 2 && toks[0].Kind == Name && isSpecial(toks[1], ":") {
 			st.label = toks[0].Text

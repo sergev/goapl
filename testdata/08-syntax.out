@@ -1,0 +1,94 @@
+      ⍝ Parentheses
+      (1+2)×3
+9
+      ((1+2))
+3
+      (((5)))
+5
+      2×(3+4)×5
+70
+      ⍝ Assignment gives a value
+      A←B←3
+      A+B
+6
+      1+C←2
+3
+      C
+2
+      ⍝ The right argument is evaluated first
+      D+(D←4)
+8
+      ⍝ A variable can take a value of any shape
+      E←5
+      E←2 2⍴E
+      E
+5 5
+5 5
+      ⍝ A label on an immediate line is ignored
+      L:1+1
+2
+      ⍝ A branch on an immediate line is ignored
+      →5
+      ⍝ Errors
+      (1+2
+Mismatched parentheses
+(1+2
+↑
+      1+2)
+Mismatched parentheses
+1+2)
+   ↑
+      )
+Invalid expression
+)
+↑
+      (
+Invalid expression
+(
+ ↑
+      ()
+Invalid expression
+()
+ ↑
+      1 2 (3)
+Invalid expression
+1 2 (3)
+    ↑
+      2+
+Invalid expression
+2+
+  ↑
+      +
+Invalid expression
++
+ ↑
+      ←1
+Invalid expression
+←1
+↑
+      1←2
+Invalid expression
+1←2
+ ↑
+      A B
+Invalid expression
+A B
+  ↑
+      UNDEF
+Variable not assigned a value
+UNDEF
+↑
+      1+UNDEF
+Variable not assigned a value
+1+UNDEF
+  ↑
+      →
+Invalid expression
+→
+ ↑
+      →1.5
+Statement no. to branch to not integer
+→1.5
+↑
+      ⍝ /* ends the session
+      /*

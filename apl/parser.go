@@ -386,10 +386,7 @@ func (p *parser) primary() (node, error) {
 		return &constNode{val: v, at: t.Pos}, nil
 	case t.Kind == Name:
 		p.i++
-		if f := p.userFn(t); f != nil {
-			if f.Arity() > 0 {
-				return nil, errorAt(10, t.Pos)
-			}
+		if f := p.userFn(t); f != nil { // niladic; others are taken by atFn
 			return &callNode{fn: f, at: t.Pos}, nil
 		}
 		return &varNode{name: t.Text, at: t.Pos}, nil

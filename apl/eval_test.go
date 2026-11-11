@@ -296,7 +296,7 @@ func TestFunctions(t *testing.T) {
 
 func TestQuadInput(t *testing.T) {
 	got := run(t, "X←⎕", "1 2 3", "Y←⎕", "1÷0", "2×X", "Y")
-	want := "⎕:\n⎕:\nATTEMPTED DIVISION BY ZERO\n1÷0\n ↑\n⎕:\n2 4 6"
+	want := "⎕:\n⎕:\nAttempted division by zero\n1÷0\n ↑\n⎕:\n2 4 6"
 	if got != want {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}
@@ -352,7 +352,7 @@ func TestFunctionErrors(t *testing.T) {
 
 func TestErrorLocation(t *testing.T) {
 	got := run(t, "∇R←BAD X", "R←X÷0", "∇", "BAD 1")
-	want := "ATTEMPTED DIVISION BY ZERO\nBAD[1] R←X÷0\n          ↑"
+	want := "Attempted division by zero\nBAD[1] R←X÷0\n          ↑"
 	if got != want {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}

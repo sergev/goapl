@@ -1,0 +1,96 @@
+      ⍝ Identity, negation, signum, reciprocal, exponential
+      +¯3 0 2.5
+¯3 0 2.5
+      -¯3 0 2.5
+3 0 ¯2.5
+      ×¯3 0 2.5
+¯1 0 1
+      ÷¯4 1 2
+¯0.25 1 0.5
+      *0 1 2
+1 2.718281828 7.389056099
+      ⍝ Not
+      ~0 1
+1 0
+      ~1 0 1 1
+0 1 0 0
+      ⍝ Ceiling, floor, magnitude, natural log (goapl additions)
+      ⌈¯2.5 ¯2 2.3 2
+¯2 ¯2 3 2
+      ⌊¯2.5 ¯2 2.3 2
+¯3 ¯2 2 2
+      |¯3 0 3
+3 0 3
+      ⍟1 10
+0 2.302585093
+      ⍝ Functions apply to each element of any shape
+      -2 3⍴⍳6
+¯1 ¯2 ¯3
+¯4 ¯5 ¯6
+      ×2 2 2⍴¯1 0 1 2
+¯1 0
+ 1 1
+
+¯1 0
+ 1 1
+      ⍝ An empty argument gives an empty result
+      ⍴-⍳0
+0
+      ⍝ Errors
+      ÷0
+Attempted inverse of zero
+÷0
+↑
+      ÷1 0
+Attempted inverse of zero
+÷1 0
+↑
+      ~2
+Value not boolean
+~2
+↑
+      ~0.5
+Value not boolean
+~0.5
+↑
+      ⍟0
+Argument is negative
+⍟0
+↑
+      ⍟¯1
+Argument is negative
+⍟¯1
+↑
+      ⍝ Functions without a monadic form
+      =5
+Monadic reference to dyadic operator
+=5
+↑
+      ≠5
+Monadic reference to dyadic operator
+≠5
+↑
+      <5
+Monadic reference to dyadic operator
+<5
+↑
+      ≤5
+Monadic reference to dyadic operator
+≤5
+↑
+      ≥5
+Monadic reference to dyadic operator
+≥5
+↑
+      >5
+Monadic reference to dyadic operator
+>5
+↑
+      ∧1
+Monadic reference to dyadic operator
+∧1
+↑
+      ∨1
+Monadic reference to dyadic operator
+∨1
+↑
