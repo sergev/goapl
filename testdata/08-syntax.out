@@ -82,10 +82,6 @@ UNDEF
 VALUE ERROR
 1+UNDEF
   ^
-      →
-SYNTAX ERROR
-→
- ^
       →1.5
 DOMAIN ERROR
 →1.5

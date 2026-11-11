@@ -164,7 +164,7 @@ type parser struct {
 }
 
 // sysFns are the system functions.
-var sysFns = map[string]bool{"⎕FX": true, "⎕CR": true, "⎕NC": true, "⎕EX": true}
+var sysFns = map[string]bool{"⎕FX": true, "⎕CR": true, "⎕NC": true, "⎕EX": true, "⎕EA": true}
 
 // parse parses one statement; returns nil if there are no tokens.
 // Names of op's operands denote functions.
@@ -187,7 +187,10 @@ func (in *Interp) parse(toks []Token, end int, op *Function) (node, error) {
 	}
 	var n node
 	var err error
-	if t := toks[0]; isSpecial(t, "→") {
+	if t := toks[0]; isSpecial(t, "→") && len(toks) == 1 {
+		p.i++
+		n = &branchNode{at: t.Pos} // escape
+	} else if isSpecial(t, "→") {
 		p.i++
 		var r node
 		if r, err = p.expr(); err == nil {

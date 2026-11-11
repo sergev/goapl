@@ -5,23 +5,28 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync/atomic"
 )
 
 // Interp holds the workspace and I/O of one interpreter session.
 type Interp struct {
-	env      // system variables
-	vars     map[string]*Array
-	fns      map[string]*Function
-	fnGen    int                  // bumped when fns change; invalidates parse caches
-	editing  *editor              // function being defined or edited, or nil
-	opFrames []map[string]*fnNode // operands of the running defined operators
-	depth    int                  // user function call depth
-	out      io.Writer
-	input    *bufio.Scanner // source of ⎕ input
-	Prompt   string         // printed before each input line
-	Echo     bool           // copy input lines to output, for transcripts
-	Color    bool           // use ANSI colors in output
-	pending  bool           // ⍞ output left a line unfinished
+	env         // system variables
+	vars        map[string]*Array
+	fns         map[string]*Function
+	fnGen       int                  // bumped when fns change; invalidates parse caches
+	editing     *editor              // function being defined or edited, or nil
+	opFrames    []map[string]*fnNode // operands of the running defined operators
+	stack       []*frame             // state indicator: running functions
+	noSuspend   int                  // >0 while errors must not suspend (⎕EA)
+	lastErr     *Error               // last error, for ⎕EM and ⎕ET
+	interrupted atomic.Bool          // set by Interrupt (Ctrl-C)
+	depth       int                  // user function call depth
+	out         io.Writer
+	input       *bufio.Scanner // source of ⎕ input
+	Prompt      string         // printed before each input line
+	Echo        bool           // copy input lines to output, for transcripts
+	Color       bool           // use ANSI colors in output
+	pending     bool           // ⍞ output left a line unfinished
 }
 
 // New returns an interpreter writing to out.
@@ -37,24 +42,37 @@ func New(out io.Writer) *Interp {
 // Exec processes one input line: a statement, a ∇ header,
 // or a line of the function being defined.
 func (in *Interp) Exec(line string) error {
+	_, err := in.execLine(line)
+	if err == errEscape || err == errUnwind || err == errReset {
+		err = nil
+	}
+	return err
+}
+
+// execLine is Exec giving also the target of a branch, or -1.
+func (in *Interp) execLine(line string) (int, error) {
 	if in.editing != nil {
-		return withSrc(in.editLine(line), line)
+		return -1, withSrc(in.editLine(line), line)
+	}
+	if t := strings.TrimSpace(line); strings.HasPrefix(t, ")") {
+		return -1, withSrc(in.command(t), line)
 	}
 	toks, err := Lex(line)
 	if err != nil {
-		return withSrc(err, line)
+		return -1, withSrc(err, line)
 	}
 	if len(toks) > 0 && isSpecial(toks[0], "∇") {
-		return withSrc(in.openEditor(line), line)
+		return -1, withSrc(in.openEditor(line), line)
 	}
 	if len(toks) >= 2 && toks[0].Kind == Name && isSpecial(toks[1], ":") {
 		toks = toks[2:] // label is ignored outside a function
 	}
 	nodes, err := in.parseLine(toks, len([]rune(line)), nil)
+	target := -1
 	if err == nil {
-		_, err = in.runLine(nodes) // a branch at top level is ignored
+		target, err = in.runLine(nodes)
 	}
-	return withSrc(err, line)
+	return target, withSrc(err, line)
 }
 
 // withSrc records the source line of an error, unless already recorded.
@@ -111,6 +129,14 @@ func (in *Interp) quoteInput() (*Array, error) {
 
 // getVar returns the value of a variable or system variable.
 func (in *Interp) getVar(name string) (*Array, bool) {
+	switch name {
+	case "⎕LC":
+		return in.lineCounter(), true
+	case "⎕EM":
+		return in.errorMessage(), true
+	case "⎕ET":
+		return in.errorType(), true
+	}
 	if isSysName(name) {
 		return in.env.get(name), true
 	}
@@ -120,6 +146,9 @@ func (in *Interp) getVar(name string) (*Array, bool) {
 
 // setVar assigns a variable or system variable.
 func (in *Interp) setVar(name string, v *Array) error {
+	if readOnly[name] {
+		return newError(SyntaxError)
+	}
 	if isSysName(name) {
 		return in.env.set(name, v)
 	}
@@ -131,27 +160,8 @@ func (in *Interp) setVar(name string, v *Array) error {
 // The same reader supplies ⎕ input.
 func (in *Interp) Run(r io.Reader) {
 	in.input = bufio.NewScanner(r)
-	for {
-		if !in.Echo {
-			in.prompt()
-		}
-		if !in.input.Scan() {
-			in.endLine()
-			return
-		}
-		line := in.input.Text()
-		if in.Echo {
-			in.endLine()
-			fmt.Fprintln(in.out, strings.TrimRight(in.promptText()+line, " "))
-		}
-		if strings.HasPrefix(strings.TrimSpace(line), "/*") {
-			in.endLine()
-			return
-		}
-		if err := in.Exec(line); err != nil {
-			in.report(err)
-		}
-	}
+	in.repl(0)
+	in.input = nil
 }
 
 func (in *Interp) prompt() {
@@ -205,6 +215,9 @@ func (in *Interp) quadInput() (*Array, error) {
 
 // report prints an error message, then the line with a caret, like SError.
 func (in *Interp) report(err error) {
+	if e, ok := err.(*Error); ok {
+		in.lastErr = e
+	}
 	in.endLine()
 	fmt.Fprintln(in.out, in.paint(styleError, err.Error()))
 	e, ok := err.(*Error)

@@ -73,6 +73,13 @@ Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
   primitives use the fast paths in `operators.go`, others the item-wise
   versions in `derived.go`. A defined operator's operands are bound in
   `Interp.opFrames`; in its body they parse as `fnOperand`.
+- **State indicator** (`suspend.go`): `call` pushes a `frame` on
+  `Interp.stack`. An APL error in a line, when running under `Run` and
+  not inside `⎕EA`, calls `suspend`, which runs a nested `repl` in the
+  function's scope; a branch there resumes the function. Lone `→`,
+  `)RESET` and end of input unwind with the sentinel errors `errEscape`/
+  `errUnwind`, `errReset` and `errQuit`, never reported. `Exec` (used
+  by unit tests without `Run`) never suspends.
 - **User functions**: `Interp.call` implements dynamic scoping by saving
   and restoring globals for args, result, `;locals` and labels; labels are
   local constants equal to their line number; `→` returns a target from

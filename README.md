@@ -92,8 +92,11 @@ R←R×I
   `[∆n]` commands. `⋄` separates statements on a line.
 - `⎕FX`, `⎕CR`, `⎕NC` and `⎕EX` define, show, classify and erase names.
   User and derived functions can be operands (`ADD/`, `,/`, `F¨`).
-- An error inside a function aborts to the top level and shows where:
-  `FACT[2] R←X÷0`.
+- An error inside a function suspends it and shows where:
+  `FACT[2] R←X÷0`. The session continues inside the function; `→N`
+  resumes, `→` abandons it, `)RESET` clears all, `)SI` and `⎕LC` show
+  the state indicator. Ctrl-C interrupts a running function. `⎕EA`
+  executes an alternate on error; `⎕EM` and `⎕ET` describe the error.
 - `⎕←X` prints X. `⎕` prompts with `⎕:`, reads a line from the same input
   and evaluates it as an expression.
 
@@ -112,7 +115,7 @@ R←R×I
 `make test` runs unit tests and golden tests. Each `testdata/*.apl` script
 covers one area of the language (lexical rules, monadic and dyadic
 functions, reduction, structural functions, products, indexing, syntax,
-user functions, `⎕`, output format, edge cases, system variables, characters, more scalar functions, axis, rearranging functions, format and execute, nested arrays, functions and operators), with `⍝` comments saying
+user functions, `⎕`, output format, edge cases, system variables, characters, more scalar functions, axis, rearranging functions, format and execute, nested arrays, functions and operators, suspension), with `⍝` comments saying
 what each group checks. It is run as an interactive session, and the
 transcript (input after the prompt, then output) is compared with the
 matching `.out` file.

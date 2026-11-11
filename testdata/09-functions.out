@@ -256,7 +256,8 @@ BAD[1] R←X÷0
 DOMAIN ERROR
 BAD[1] R←X÷0
           ^
-      ⍝ Locals are restored after an error
+      ⍝ An error suspends the function; )RESET leaves it and restores locals
+      )RESET
       X
 100
       ⍝ Branch target must be an integer

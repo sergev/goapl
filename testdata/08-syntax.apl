@@ -32,7 +32,6 @@ L:1+1
 A +
 UNDEF
 1+UNDEF
-→
 →1.5
 ⍝ /* ends the session
 /*

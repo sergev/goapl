@@ -180,8 +180,11 @@ func (in *Interp) applyFn(f *fnNode, a, b *Array) (*Array, error) {
 	case fnEach:
 		return in.each(f.left, a, b)
 	case fnSys:
-		if a != nil {
+		if (a != nil) != (f.glyph == "⎕EA") {
 			return nil, newError(ValenceError)
+		}
+		if a != nil {
+			return in.executeAlternate(a, b)
 		}
 		return in.sysFn(f.glyph, b)
 	case fnOperand:
@@ -246,6 +249,9 @@ func (in *Interp) run(n node) (int, error) {
 		return -1, nil
 	}
 	if b, ok := n.(*branchNode); ok {
+		if b.right == nil {
+			return -1, errEscape
+		}
 		v, err := in.eval(b.right)
 		if err != nil {
 			return -1, err

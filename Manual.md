@@ -1414,6 +1414,9 @@ a value.
 | `⎕PP` | print precision, in digits | 10 | 1 or more; above 17 means 17 |
 | `⎕PW` | print width, in characters | 80 | 30 to 1000 |
 | `⎕RL` | random link, the seed of `?` | 16807 | 1 to ¯2+2*31 |
+| `⎕LC` | line numbers of running functions | | read only |
+| `⎕EM` | message of the last error | | read only |
+| `⎕ET` | type of the last error | 0 0 | read only |
 
 A value outside the allowed range is a `DOMAIN ERROR`; an unknown `⎕`
 name is a `SYNTAX ERROR`.
@@ -1810,17 +1813,101 @@ as the header says.
 
 ## Errors in functions
 
-An error stops all running functions and returns to the session. The
-message shows the function and statement number where it happened.
+An error in a function *suspends* it. The message shows the function and
+statement number, and the session continues inside the function: its
+local names are visible and can be changed. The functions that called it
+wait, unfinished.
 
 ```apl
       ∇R←RATIO X
 [1] R←X÷X-1
 [2] ∇
-      RATIO 1
+      ∇R←CALC X
+[1] R←1+RATIO X
+[2] ∇
+      CALC 1
 DOMAIN ERROR
 RATIO[1] R←X÷X-1
             ^
+      X
+1
+      X←3
+      →⎕LC
+2.5
+```
+
+From a suspension:
+
+- `→N` resumes the suspended function at line N; `→⎕LC` runs the failed
+  line again, as above. The calls then complete as if nothing happened.
+- `→` alone abandons the suspended function and its callers, back to the
+  previous suspension or the session.
+- `)RESET` abandons all suspensions.
+
+Errors in a script suspend too; the lines after it run inside the
+function until a `→` or `)RESET`.
+
+## State indicator `)SI` and `⎕LC`
+
+`)SI` lists the functions in progress, most recent first, with the
+current line number; `*` marks a suspended one. `⎕LC` gives those line
+numbers as a vector.
+
+```apl
+      ∇R←F X
+[1] R←X÷0
+[2] ∇
+      ∇R←G X
+[1] R←F X
+[2] ∇
+      G 1
+DOMAIN ERROR
+F[1] R←X÷0
+        ^
+      )SI
+F[1] *
+G[1]
+      ⎕LC
+1 1
+      )RESET
+```
+
+## Interrupt
+
+Ctrl-C stops a running function before its next line, with an
+`INTERRUPT`, and suspends it like an error.
+
+## Error handling `⎕EA`, `⎕EM`, `⎕ET`
+
+`A ⎕EA B` executes the string B and gives its value; if B fails, it
+executes A instead. Errors inside B do not suspend.
+
+`⎕EM` holds the report of the last error as a character matrix, and
+`⎕ET` its type as two numbers (0 0 if there was none):
+
+| Class | `⎕ET` | Class | `⎕ET` |
+|:--|:--|:--|:--|
+| INTERRUPT | 1 1 | VALENCE ERROR | 5 1 |
+| SYSTEM LIMIT | 1 4 | RANK ERROR | 5 2 |
+| NONCE ERROR | 1 6 | LENGTH ERROR | 5 3 |
+| SYNTAX ERROR | 2 1 | DOMAIN ERROR | 5 4 |
+| DEFN ERROR | 2 2 | INDEX ERROR | 5 5 |
+| VALUE ERROR | 3 1 | AXIS ERROR | 5 6 |
+
+```apl
+      '0' ⎕EA '1÷0'
+0
+      ⎕ET
+5 4
+      ⍴⎕EM
+3 12
+      ∇R←SAFEDIV X
+[1] R←'0' ⎕EA '1÷X'
+[2] ∇
+      SAFEDIV 4
+0.25
+      SAFEDIV 0
+0
 ```
 
 # Errors
@@ -1848,7 +1935,7 @@ LENGTH ERROR
 | DEFN ERROR | bad function header; a header for an existing function; a bad editor command; a label used twice |
 | NONCE ERROR | a glyph that goapl knows but does not implement yet |
 | SYSTEM LIMIT | more than 1000 nested calls |
-| INTERRUPT | `⎕` at end of input |
+| INTERRUPT | Ctrl-C; `⎕` or `⍞` at end of input |
 
 # Differences from the original
 
@@ -1872,6 +1959,7 @@ goapl adds to the language of the Pascal original:
   assignment.
 - `⋄`, function editing, `⎕FX ⎕CR ⎕NC ⎕EX`, any function as an operand,
   ambivalent functions, defined operators.
+- Suspension on error, `)SI`, `)RESET`, `⎕LC`, `⎕EA ⎕EM ⎕ET`, Ctrl-C.
 
 goapl follows APL2 where the original differs:
 
@@ -1901,7 +1989,7 @@ numbers.
 
 ```text
 line       := [ label : ] statement { ⋄ statement }
-statement  := → expr | expr
+statement  := → expr | → | expr
 expr       := fn expr
             | name ← expr
             | name [ index ] ← expr
@@ -1964,6 +2052,7 @@ fname      := name | ( name name [ name ] )
 | `⎕CR` | lines of function named Y | |
 | `⎕NC` | class of name Y | |
 | `⎕EX` | erase name Y | |
+| `⎕EA` | | execute Y, or X on error |
 | `⍎` | value of statement Y | |
 | `/ ⌿` | | Y replicated by X |
 | `\ ⍀` | | Y expanded by X |

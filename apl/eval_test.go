@@ -2,8 +2,10 @@ package apl
 
 import (
 	"bytes"
+	"io"
 	"strings"
 	"testing"
+	"time"
 )
 
 // run executes lines and returns trimmed output.
@@ -409,5 +411,27 @@ func TestColorOutput(t *testing.T) {
 		"      \x1b[2m⎕:\x1b[0m\n      "
 	if out.String() != want {
 		t.Errorf("got %q\nwant %q", out.String(), want)
+	}
+}
+
+// Interrupt stops a running loop and suspends the function.
+func TestInterrupt(t *testing.T) {
+	var out bytes.Buffer
+	in := New(&out)
+	r, w := io.Pipe()
+	done := make(chan bool)
+	go func() {
+		in.Run(r)
+		done <- true
+	}()
+	io.WriteString(w, "∇LOOP\nL:→L\n∇\nLOOP\n")
+	time.Sleep(50 * time.Millisecond)
+	in.Interrupt()
+	io.WriteString(w, ")SI\n")
+	w.Close()
+	<-done
+	want := "INTERRUPT\nLOOP[1] L:→L\nLOOP[1] *\n"
+	if out.String() != want {
+		t.Errorf("got %q, want %q", out.String(), want)
 	}
 }

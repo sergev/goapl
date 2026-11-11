@@ -175,7 +175,8 @@ BAD 1
 R←1+BAD X
 ∇
 CALLBAD 1
-⍝ Locals are restored after an error
+⍝ An error suspends the function; )RESET leaves it and restores locals
+)RESET
 X
 ⍝ Branch target must be an integer
 ∇BADJUMP

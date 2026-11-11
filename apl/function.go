@@ -70,7 +70,7 @@ func parseHeader(text string) (*Function, error) {
 	// name reads a name; sys allows a system variable.
 	name := func(sys bool) (string, error) {
 		if i >= len(toks) || toks[i].Kind != Name ||
-			isSysName(toks[i].Text) && !(sys && sysVars[toks[i].Text]) {
+			isSysName(toks[i].Text) && !(sys && sysVars[toks[i].Text] && !readOnly[toks[i].Text]) {
 			return "", bad()
 		}
 		i++
@@ -261,18 +261,33 @@ func (in *Interp) call(f *Function, left, right *Array) (*Array, error) {
 	if f.IsOperator() {
 		op = f
 	}
+	fr := &frame{f: f}
+	in.stack = append(in.stack, fr)
+	defer func() { in.stack = in.stack[:len(in.stack)-1] }()
 	for pc := 1; pc >= 1 && pc <= len(f.Stmts); {
+		fr.pc = pc
 		st := f.Stmts[pc-1]
-		if st.nodes == nil || st.gen != in.fnGen {
-			nodes, err := in.parseLine(st.toks, len([]rune(st.text)), op)
+		target, err := -1, error(nil)
+		if in.interrupted.Swap(false) {
+			err = newError(Interrupt)
+		} else if st.nodes == nil || st.gen != in.fnGen {
+			st.nodes, err = in.parseLine(st.toks, len([]rune(st.text)), op)
+			st.gen = in.fnGen
 			if err != nil {
-				return nil, locate(err, f, pc, st.text)
+				st.nodes = nil
 			}
-			st.nodes, st.gen = nodes, in.fnGen
 		}
-		target, err := in.runLine(st.nodes)
+		if err == nil {
+			target, err = in.runLine(st.nodes)
+		}
 		if err != nil {
-			return nil, locate(err, f, pc, st.text)
+			err = locate(err, f, pc, st.text)
+			if !in.canSuspend(err) {
+				return nil, err
+			}
+			if target, err = in.suspend(err); err != nil {
+				return nil, err
+			}
 		}
 		if target >= 0 {
 			pc = target
