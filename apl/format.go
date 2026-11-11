@@ -34,17 +34,22 @@ func formatNumber(v float64, pp int) string {
 	return strings.ReplaceAll(s, "-", "¯")
 }
 
-// formatElem renders one element.
-func formatElem(v Value, pp int) string {
+// cellLines renders one element as lines; a nested item gets a
+// leading blank.
+func cellLines(v Value, pp int) []string {
 	switch v := v.(type) {
 	case float64:
-		return formatNumber(v, pp)
+		return []string{formatNumber(v, pp)}
 	case Char:
-		return string(rune(v))
+		return []string{string(rune(v))}
 	case *Array:
-		return format(v, pp)
+		lines := strings.Split(format(v, pp), "\n")
+		for i, l := range lines {
+			lines[i] = " " + l
+		}
+		return lines
 	}
-	return "?"
+	return []string{"?"}
 }
 
 // Format renders an array with the default ⎕PP.
@@ -72,28 +77,33 @@ func format(a *Array, pp int) string {
 }
 
 // formatRows renders each row (each vector along the last axis) of an
-// array as a line; all lines have the same width. Columns holding
-// numbers are right-aligned and set off by a blank; adjacent character
-// columns touch.
+// array; a row holding nested items may take several lines, separated
+// by newlines. Columns holding numbers are right-aligned, and set off
+// by a blank, as are nested items; adjacent character columns touch.
 func formatRows(a *Array, pp int) []string {
 	r := a.Rank()
-	if r == 0 {
-		return []string{formatElem(a.At(0), pp)}
+	cols, nrows := 1, 1
+	switch {
+	case r == 1:
+		cols = max(a.Size(), 1)
+	case r > 1:
+		cols, nrows = a.Shape[r-1], shapeSize(a.Shape[:r-1])
 	}
-	cols := a.Shape[r-1]
-	nrows := shapeSize(a.Shape[:r-1])
-	if r == 1 {
-		cols, nrows = max(a.Size(), 1), 1
-	}
-	cells := make([]string, a.Size())
+	cells := make([][]string, a.Size())
 	width := make([]int, cols)
 	numeric := make([]bool, cols)
+	nested := make([]bool, cols)
 	for i := range cells {
 		v := a.At(i)
-		cells[i] = formatElem(v, pp)
-		width[i%cols] = max(width[i%cols], len([]rune(cells[i])))
-		if _, ok := v.(Char); !ok {
+		cells[i] = cellLines(v, pp)
+		for _, l := range cells[i] {
+			width[i%cols] = max(width[i%cols], len([]rune(l)))
+		}
+		switch v.(type) {
+		case float64:
 			numeric[i%cols] = true
+		case *Array:
+			nested[i%cols] = true
 		}
 	}
 	rows := make([]string, nrows)
@@ -101,15 +111,34 @@ func formatRows(a *Array, pp int) []string {
 		return rows
 	}
 	for row := range rows {
-		var b strings.Builder
+		height := 1
 		for c := range cols {
-			if c > 0 && (numeric[c] || numeric[c-1]) {
-				b.WriteByte(' ')
-			}
-			s := cells[row*cols+c]
-			b.WriteString(strings.Repeat(" ", width[c]-len([]rune(s))) + s)
+			height = max(height, len(cells[row*cols+c]))
 		}
-		rows[row] = b.String()
+		lines := make([]string, height)
+		for j := range lines {
+			var b strings.Builder
+			for c := range cols {
+				if c > 0 && (numeric[c] || numeric[c-1] || nested[c] || nested[c-1]) {
+					b.WriteByte(' ')
+				}
+				s := ""
+				if cell := cells[row*cols+c]; j < len(cell) {
+					s = cell[j]
+				}
+				pad := strings.Repeat(" ", width[c]-len([]rune(s)))
+				if numeric[c] && !nested[c] {
+					b.WriteString(pad + s)
+				} else {
+					b.WriteString(s + pad)
+				}
+			}
+			lines[j] = b.String()
+			if !a.IsSimple() {
+				lines[j] = strings.TrimRight(lines[j], " ")
+			}
+		}
+		rows[row] = strings.Join(lines, "\n")
 	}
 	return rows
 }
@@ -142,6 +171,10 @@ func wrap(text string, width int) string {
 
 // toChars turns display rows into a character array of shape s.
 func toChars(rows []string, shape []int) *Array {
+	if strings.Contains(strings.Join(rows, ""), "\n") {
+		rows = strings.Split(strings.Join(rows, "\n"), "\n")
+		shape = []int{len(rows)}
+	}
 	w := 0
 	for _, r := range rows {
 		w = max(w, len([]rune(r)))

@@ -102,7 +102,7 @@ func TestErrors(t *testing.T) {
 		{"1 2+[1]3", AxisError},
 		{"+/[1;2]1", AxisError},
 		{"2+", SyntaxError},
-		{"1 2 (3)", SyntaxError},
+		{"1 2 (3", SyntaxError},
 		{"~/1 0", SyntaxError},
 		{"/1 2", SyntaxError},
 		{"¯2⍟8", DomainError},

@@ -10,16 +10,7 @@ APL2 error classes and behavior where the original differs (T1);
 arrays of any rank with general (character, mixed, nested) elements (T2);
 `⎕IO ⎕CT ⎕PP ⎕RL` (T3); characters, strings and `⍞` (T4);
 `○ ! ? ⍲ ⍱` (T5); scan, axis, N-wise reduction, expand (T6);
-`, ⍪ ⌽ ⊖ ⍉ ↑ ↓ ∊ ~ ⍋ ⍒ ⊥ ⊤ ⌹` (T7); `⍕ ⍎ ⎕PW` (T8).
-
-## T9. Nested arrays
-
-- Strand notation `A B (C D)`.
-- `⊂` enclose, `⊃` disclose and first, `≡` depth and match, `∊` enlist.
-- `¨` each.
-- Pick `A⊃B`; selective and strand assignment `(A B)←1 2`.
-- Nested display with boxes or spacing, as in APL2.
-- Scalar functions extend into nested arrays (pervasion).
+`, ⍪ ⌽ ⊖ ⍉ ↑ ↓ ∊ ~ ⍋ ⍒ ⊥ ⊤ ⌹` (T7); `⍕ ⍎ ⎕PW` (T8); nested arrays (T9).
 
 ## T10. Functions
 

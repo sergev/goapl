@@ -151,10 +151,10 @@ func TestFormatGeneral(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 	n := General(nil, []Value{Chars("ab")}, nil)
-	if got := Format(n); got != "ab" {
+	if got := Format(n); got != " ab" {
 		t.Errorf("nested: %q", got)
 	}
-	if got := formatElem(nil, defaultPP); got != "?" {
+	if got := cellLines(nil, defaultPP)[0]; got != "?" {
 		t.Errorf("unknown element: %q", got)
 	}
 }

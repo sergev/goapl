@@ -337,13 +337,32 @@ func boolVal(b bool) float64 {
 }
 
 // applyMonad applies f to every element.
+// Nested items are entered recursively.
 func applyMonad(e *env, f monadFn, x *Array) (*Array, error) {
-	d, err := x.numeric()
-	if err != nil {
-		return nil, err
+	if !x.IsNumeric() {
+		r := make([]Value, x.Size())
+		for i, v := range x.Elems {
+			switch v := v.(type) {
+			case float64:
+				y, err := f(e, v)
+				if err != nil {
+					return nil, err
+				}
+				r[i] = y
+			case *Array:
+				y, err := applyMonad(e, f, v)
+				if err != nil {
+					return nil, err
+				}
+				r[i] = y
+			default:
+				return nil, newError(DomainError)
+			}
+		}
+		return General(x.Shape, r, nil), nil
 	}
-	r := &Array{Shape: x.Shape, Data: make([]float64, len(d))}
-	for i, v := range d {
+	r := &Array{Shape: x.Shape, Data: make([]float64, len(x.Data))}
+	for i, v := range x.Data {
 		y, err := f(e, v)
 		if err != nil {
 			return nil, err
@@ -353,8 +372,16 @@ func applyMonad(e *env, f monadFn, x *Array) (*Array, error) {
 	return r, nil
 }
 
-// elem applies the dyadic form to two elements of any type.
+// elem applies the dyadic form to two elements of any type; nested
+// items are entered recursively.
 func (sf *scalarFn) elem(e *env, x, y Value) (Value, error) {
+	if isNested(x) || isNested(y) {
+		r, err := applyDyad(e, sf, item(x), item(y))
+		if err != nil {
+			return nil, err
+		}
+		return itemValue(r), nil
+	}
 	a, ok1 := x.(float64)
 	b, ok2 := y.(float64)
 	switch {

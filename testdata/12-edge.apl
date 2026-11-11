@@ -24,7 +24,7 @@ A←2 2 2 2⍴⍳16
 A[2;1;2;2]
 A[;;1;1]
 ⍝ Parse errors in nested parts
-(1 2 (3))
+(1 2 (3)))
 -)
 V[(]←1
 V[1]←)
@@ -54,6 +54,6 @@ R←X+1
 LEX 1
 ⍝ A syntax error in a function shows up when the line runs
 ∇R←SYN X
-R←1 2 (3)
+R←1 2 )3
 ∇
 SYN 1

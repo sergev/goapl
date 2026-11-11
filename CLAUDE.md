@@ -36,7 +36,9 @@ Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
 - **Values**: `Array{Shape, Data, Elems, Proto}` (`value.go`), any rank.
   A numeric array keeps `Data []float64` (the fast path); a general one
   keeps `Elems []Value` (`float64`, `Char` or nested `*Array`) and, when
-  empty, its prototype in `Proto`. Build general arrays with `General`,
+  empty, its prototype in `Proto`. A nested item is never a simple
+  scalar array (`General` unwraps those); `item`/`itemValue` convert
+  between elements and arrays. Build general arrays with `General`,
   which falls back to numeric when it can; `gather` selects elements for
   structural functions, `numeric` gives DOMAIN ERROR for general arrays,
   `axisSplit` views an array as frames along an axis. `format`
@@ -59,6 +61,11 @@ Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
   `operators.go`. Operators accept only dyadic scalar functions. An axis
   `[K]` is parsed into `fnNode.axis`; `axisIndex` resolves it, and
   structural functions take it through `structFn.dyadAxis`.
+- **Nested arrays** (`nested.go`): strands are `strandNode`; `f¨` is
+  `fnEach` run by `Interp.each` through `applyFn`; `(sel V)←X` replaces V
+  in the parsed selection by a `posNode` (element positions) and assigns
+  through the positions it yields. Scalar functions pervade via
+  `scalarFn.elem`.
 - **User functions**: `Interp.call` implements dynamic scoping by saving
   and restoring globals for args, result, `;locals` and labels; labels are
   local constants equal to their line number; `→` returns a target from

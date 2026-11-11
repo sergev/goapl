@@ -23,7 +23,7 @@ var structFns = map[string]*structFn{
 	"⍉":  {monad: transpose, dyad: transposeAxes},
 	"↑":  {monad: first, dyad: take},
 	"↓":  {dyad: drop},
-	"∊":  {dyad: member},
+	"∊":  {monad: enlist, dyad: member},
 	"~":  {dyad: without},
 	"⍋":  {monad: gradeUp, dyad: gradeUpCollate},
 	"⍒":  {monad: gradeDown, dyad: gradeDownCollate},
@@ -31,6 +31,9 @@ var structFns = map[string]*structFn{
 	"⊤":  {dyad: encode},
 	"⌹":  {monad: inverse, dyad: matDivide},
 	"⍕":  {monad: formatFn, dyad: formatWidth},
+	"⊂":  {monad: enclose, dyad: nonce},
+	"⊃":  {monad: disclose, dyad: pickItem},
+	"≡":  {monad: depthFn, dyad: matchFn},
 	"?":  {dyad: deal},
 }
 

@@ -82,22 +82,10 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 		if err != nil {
 			return nil, err
 		}
-		if n.fn.kind == fnUser {
-			r, err := in.call(n.fn.user, nil, x)
-			return r, setPos(err, n.fn.at)
-		}
-		ax, err := in.evalAxis(n.fn)
-		if err != nil {
-			return nil, err
-		}
-		r, err := in.monad(n.fn, ax, x)
+		r, err := in.applyFn(n.fn, nil, x)
 		return r, setPos(err, n.fn.at)
 	case *dyadNode:
 		b, err := in.eval(n.right)
-		if err != nil {
-			return nil, err
-		}
-		ax, err := in.evalAxis(n.fn)
 		if err != nil {
 			return nil, err
 		}
@@ -105,14 +93,141 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 		if err != nil {
 			return nil, err
 		}
-		if n.fn.kind == fnUser {
-			r, err := in.call(n.fn.user, a, b)
-			return r, setPos(err, n.fn.at)
-		}
-		r, err := in.dyad(n.fn, ax, a, b)
+		r, err := in.applyFn(n.fn, a, b)
 		return r, setPos(err, n.fn.at)
+	case *strandNode:
+		items := make([]Value, len(n.items))
+		for i := len(items) - 1; i >= 0; i-- {
+			v, err := in.eval(n.items[i])
+			if err != nil {
+				return nil, err
+			}
+			items[i] = itemValue(v)
+		}
+		return General([]int{len(items)}, items, items[0]), nil
+	case *strandAssignNode:
+		v, err := in.eval(n.right)
+		if err != nil {
+			return nil, err
+		}
+		if v.Rank() > 1 {
+			return nil, errorAt(RankError, n.at)
+		}
+		if v.Size() != 1 && v.Size() != len(n.names) {
+			return nil, errorAt(LengthError, n.at)
+		}
+		for i, name := range n.names {
+			x := item(v.At(min(i, v.Size()-1)))
+			if err := in.setVar(name, x); err != nil {
+				return nil, setPos(err, n.at)
+			}
+		}
+		return v, nil
+	case *selAssignNode:
+		v, err := in.eval(n.right)
+		if err != nil {
+			return nil, err
+		}
+		return v, setPos(in.selectiveAssign(n, v), n.at)
+	case *posNode:
+		x, ok := in.getVar(n.name)
+		if !ok {
+			return nil, errorAt(ValueError, n.at)
+		}
+		r := &Array{Shape: x.Shape, Data: make([]float64, x.Size())}
+		for i := range r.Data {
+			r.Data[i] = float64(i + 1)
+		}
+		return r, nil
 	}
 	panic("eval: unknown node")
+}
+
+// selectiveAssign is (sel V)←X: the elements of V that sel selects
+// get the items of X. Fill positions of the selection are skipped.
+func (in *Interp) selectiveAssign(n *selAssignNode, v *Array) error {
+	pos, err := in.eval(n.sel)
+	if err != nil {
+		return err
+	}
+	if !pos.IsNumeric() {
+		return newError(DomainError)
+	}
+	if v.Size() != 1 && !sameShape(v, pos) {
+		if v.Rank() != pos.Rank() {
+			return newError(RankError)
+		}
+		return newError(LengthError)
+	}
+	x, _ := in.getVar(n.name)
+	elems := append([]Value(nil), x.elems()...)
+	for i, p := range pos.Data {
+		if p >= 1 {
+			elems[int(p)-1] = v.At(min(i, v.Size()-1))
+		}
+	}
+	return in.setVar(n.name, General(x.Shape, elems, x.Fill()))
+}
+
+// applyFn applies f to B, or to A and B; a is nil for a monadic call.
+func (in *Interp) applyFn(f *fnNode, a, b *Array) (*Array, error) {
+	switch f.kind {
+	case fnUser:
+		if (a == nil) != (f.user.Arity() == 1) {
+			return nil, newError(ValenceError)
+		}
+		return in.call(f.user, a, b)
+	case fnEach:
+		return in.each(f.inner, a, b)
+	}
+	ax, err := in.evalAxis(f)
+	if err != nil {
+		return nil, err
+	}
+	if a == nil {
+		return in.monad(f, ax, b)
+	}
+	return in.dyad(f, ax, a, b)
+}
+
+// each is f¨B or A f¨B: f applied to each item, or to corresponding
+// items with a scalar or one-item argument extended.
+func (in *Interp) each(f *fnNode, a, b *Array) (*Array, error) {
+	shape, n := b.Shape, b.Size()
+	if a != nil {
+		switch {
+		case sameShape(a, b):
+		case a.Size() == 1 && (a.IsScalar() || !b.IsScalar()):
+		case b.Size() == 1:
+			shape, n = a.Shape, a.Size()
+		case a.Rank() != b.Rank():
+			return nil, newError(RankError)
+		default:
+			return nil, newError(LengthError)
+		}
+	}
+	at := func(x *Array, i int) *Array {
+		if x.Size() == 1 {
+			return item(x.At(0))
+		}
+		return item(x.At(i))
+	}
+	r := make([]Value, n)
+	for i := range r {
+		var x *Array
+		if a != nil {
+			x = at(a, i)
+		}
+		v, err := in.applyFn(f, x, at(b, i))
+		if err != nil {
+			return nil, err
+		}
+		if v == nil {
+			return nil, newError(ValueError)
+		}
+		r[i] = itemValue(v)
+	}
+	return General(shape, r, b.Fill()), nil
 }
 
 // run executes a statement, printing its value unless it is an
@@ -144,7 +259,7 @@ func (in *Interp) run(n node) (int, error) {
 		return -1, err
 	}
 	switch n.(type) {
-	case *assignNode, *indexAssignNode, *quadOutNode:
+	case *assignNode, *indexAssignNode, *quadOutNode, *strandAssignNode, *selAssignNode:
 		return -1, nil
 	}
 	return -1, in.print(v)

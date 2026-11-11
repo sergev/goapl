@@ -1,0 +1,244 @@
+      ⍝ Strands: juxtaposed values make a vector; parentheses group an item
+      1 2 (3 4)
+1 2  3 4
+      ⍴1 2 (3 4)
+3
+      'AB' 'CD'
+ AB  CD
+      ⍴'AB' 'CD'
+2
+      'A' 'B'
+AB
+      A←5
+      B←6 7
+      A B
+5  6 7
+      ⍴A B
+2
+      (1 2)(3 4)
+ 1 2  3 4
+      X←1 (2 3) 'ABC'
+      X
+1  2 3  ABC
+      ⍝ Depth: 0 for a simple scalar, 1 for a simple array, more for nesting
+      ≡5
+0
+      ≡1 2
+1
+      ≡X
+2
+      ≡1 (2 (3 4))
+3
+      ⍝ Indexing gives scalars holding the items
+      X[2]
+ 2 3
+      ⍴X[2]
+
+      X[2 3]
+ 2 3  ABC
+      ⍝ Enclose makes a scalar; a simple scalar stays as it is
+      ⊂1 2
+ 1 2
+      ⍴⊂1 2
+
+      ≡⊂1 2
+2
+      ⊂5
+5
+      (⊂1 2),⊂3 4
+ 1 2  3 4
+      ⍝ Disclose makes one array of the items, padding with fill
+      ⊃(1 2)(3 4 5)
+1 2 0
+3 4 5
+      ⊃'AB' 'CDE'
+AB 
+CDE
+      ⊃1 (2 3)
+1 0
+2 3
+      ⊃1 2 3
+1 2 3
+      ⍝ First and pick
+      ↑X
+1
+      ↑(1 2)(3 4)
+1 2
+      2⊃X
+2 3
+      3⊃X
+ABC
+      (2 1)⊃(1 2)(3 4 5)
+3
+      (⊂2 1)⊃2 2⍴'ABCD'
+C
+      ⍝ Enlist: all simple scalars as a vector
+      ∊1 (2 3) (4 (5 6))
+1 2 3 4 5 6
+      ∊'AB' 'CD'
+ABCD
+      ∊5
+5
+      ⍝ Match
+      (1 2)≡1 2
+1
+      (1 2)≡1 2 3
+0
+      1 2 3≡,¨1 2 3
+0
+      X≡1 (2 3) 'ABC'
+1
+      'A'≡,'A'
+0
+      ⍝ Scalar functions reach into nested items
+      1 2 (3 4)+10
+11 12  13 14
+      -1 (2 3)
+¯1  ¯2 ¯3
+      (1 2)(3 4)×(10 20)
+ 10 20  60 80
+      1 (2 3)=1 (2 4)
+1  1 0
+      ⍝ Each applies a function to every item
+      ⍴¨1 2 (3 4) 'ABCD'
+     2  4
+      1 2 3⍴¨4 5 6
+ 4  5 5  6 6 6
+      +/¨(1 2)(3 4 5)
+3 12
+      ⌽¨'ABC' 'DE'
+ CBA  ED
+      2↑¨(1 2 3)(4 5 6)
+ 1 2  4 5
+      1↓¨⊂'ABC'
+ BC
+      ∇R←SQ X
+[1] R←X×X
+[2] ∇
+      SQ¨1 (2 3)
+1  4 9
+      ∇R←A ADD B
+[1] R←A+B
+[2] ∇
+      1 2 ADD¨10 20
+11 22
+      ⍴¨⍳0
+
+      ⍝ Strand assignment
+      (P Q)←10 20
+      P
+10
+      Q
+20
+      (P Q)←'X' (1 2)
+      Q
+1 2
+      (P Q)←7
+      P+Q
+14
+      ⍝ Selective assignment: assign through a selection of a variable
+      V←⍳5
+      (2↑V)←0
+      V
+0 0 3 4 5
+      ((V>2)/V)←9
+      V
+0 0 9 9 9
+      (⌽V)←⍳5
+      V
+5 4 3 2 1
+      (¯2↑V)←'AB'
+      V
+5 4 3 AB
+      M←3 3⍴0
+      (1 1⍉M)←1
+      M
+1 0 0
+0 1 0
+0 0 1
+      (,M)←⍳9
+      M
+1 2 3
+4 5 6
+7 8 9
+      (M[2;])←0
+      M
+1 2 3
+0 0 0
+7 8 9
+      U←1 2
+      (1 0 1\U)←7 8 9
+      U
+7 9
+      ⍝ Display of nested matrices
+      (2 2⍴⍳4) 'X'
+ 1 2 X
+ 3 4
+      2 2⍴(1 2)(3 4)'AB' 5
+ 1 2  3 4
+ AB  5
+      ⍕1 (2 3)
+1  2 3
+      ⍴⍕1 (2 3)
+6
+      ⍝ Errors
+      ¨1
+SYNTAX ERROR
+¨1
+^
+      1 2 3⍴¨1 2
+LENGTH ERROR
+1 2 3⍴¨1 2
+      ^
+      (1 2)+(1 2 3)
+LENGTH ERROR
+(1 2)+(1 2 3)
+     ^
+      3⊃1 2
+INDEX ERROR
+3⊃1 2
+ ^
+      (1 1)⊃1 2
+RANK ERROR
+(1 1)⊃1 2
+     ^
+      (⊂1 1)⊃1 2
+RANK ERROR
+(⊂1 1)⊃1 2
+      ^
+      'A'⊃1 2
+DOMAIN ERROR
+'A'⊃1 2
+   ^
+      (2 2⍴1)⊃1 2
+RANK ERROR
+(2 2⍴1)⊃1 2
+       ^
+      (P Q R)←1 2
+LENGTH ERROR
+(P Q R)←1 2
+^
+      (P Q)←2 2⍴1
+RANK ERROR
+(P Q)←2 2⍴1
+^
+      (1+V)←1
+SYNTAX ERROR
+(1+V)←1
+  ^
+      (2↑V)←1 2 3
+LENGTH ERROR
+(2↑V)←1 2 3
+^
+      (2↑W)←1
+VALUE ERROR
+(2↑W)←1
+   ^
+      1 2⊂3
+NONCE ERROR
+1 2⊂3
+   ^
+      SQ¨1 'A'
+DOMAIN ERROR
+SQ[1] R←X×X
+         ^

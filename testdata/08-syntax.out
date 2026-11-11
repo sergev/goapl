@@ -50,9 +50,9 @@ SYNTAX ERROR
 SYNTAX ERROR
 ()
  ^
-      1 2 (3)
+      1 2 (3
 SYNTAX ERROR
-1 2 (3)
+1 2 (3
     ^
       2+
 SYNTAX ERROR
@@ -70,10 +70,10 @@ SYNTAX ERROR
 SYNTAX ERROR
 1←2
  ^
-      A B
+      A +
 SYNTAX ERROR
-A B
-  ^
+A +
+   ^
       UNDEF
 VALUE ERROR
 UNDEF

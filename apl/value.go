@@ -32,20 +32,33 @@ func Chars(s string) *Array {
 }
 
 // General returns an array of elems, numeric if they all are numbers.
-// proto is the prototype used when elems is empty.
+// proto is the prototype used when elems is empty. A simple scalar
+// array as an element is replaced by its element.
 func General(shape []int, elems []Value, proto Value) *Array {
+	numeric, copied := true, false
+	for i, e := range elems {
+		if a, ok := e.(*Array); ok && a.IsScalar() && !isNested(a.At(0)) {
+			if !copied {
+				elems, copied = append([]Value(nil), elems...), true
+			}
+			elems[i] = a.At(0)
+		}
+		if _, ok := elems[i].(float64); !ok {
+			numeric = false
+		}
+	}
+	if _, ok := proto.(float64); len(elems) == 0 && proto != nil && !ok {
+		numeric = false
+	}
+	if !numeric {
+		if elems == nil {
+			elems = []Value{}
+		}
+		return &Array{Shape: shape, Elems: elems, Proto: prototype(proto)}
+	}
 	nums := make([]float64, len(elems))
 	for i, e := range elems {
-		v, ok := e.(float64)
-		if !ok {
-			return &Array{Shape: shape, Elems: elems, Proto: prototype(proto)}
-		}
-		nums[i] = v
-	}
-	if len(elems) == 0 && proto != nil {
-		if _, ok := proto.(float64); !ok {
-			return &Array{Shape: shape, Elems: []Value{}, Proto: prototype(proto)}
-		}
+		nums[i] = e.(float64)
 	}
 	return &Array{Shape: shape, Data: nums}
 }
@@ -215,4 +228,54 @@ func match(x, y Value, ct float64) bool {
 		return true
 	}
 	return false
+}
+
+func isNested(v Value) bool {
+	_, ok := v.(*Array)
+	return ok
+}
+
+// item gives element v as an array: a simple scalar or the nested array.
+func item(v Value) *Array {
+	if a, ok := v.(*Array); ok {
+		return a
+	}
+	return General(nil, []Value{v}, nil)
+}
+
+// itemValue gives array a as an element: a simple scalar's element, or
+// a itself.
+func itemValue(a *Array) Value {
+	if a.IsScalar() && !isNested(a.At(0)) {
+		return a.At(0)
+	}
+	return a
+}
+
+// IsSimple reports whether no element of a is an array.
+func (a *Array) IsSimple() bool {
+	for _, v := range a.Elems {
+		if isNested(v) {
+			return false
+		}
+	}
+	return true
+}
+
+// depth is ≡X: 0 for a simple scalar, 1 for a simple array, and one more
+// than the deepest item for a nested one.
+func depth(a *Array) int {
+	if a.IsSimple() {
+		if a.IsScalar() {
+			return 0
+		}
+		return 1
+	}
+	d := 0
+	for _, v := range a.Elems {
+		if x, ok := v.(*Array); ok {
+			d = max(d, depth(x))
+		}
+	}
+	return d + 1
 }

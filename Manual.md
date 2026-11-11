@@ -140,13 +140,17 @@ quotes is an ordinary character.
 | `⍉` | transpose | transpose |
 | `↑` | first | take |
 | `↓` | | drop |
-| `∊` | | membership |
+| `∊` | enlist | membership |
 | `~` | | without |
 | `⍋ ⍒` | grade up, down | grade with collating sequence |
 | `⊥` | | decode |
 | `⊤` | | encode |
 | `⌹` | matrix inverse | matrix divide |
 | `⍕` | format | format with width and decimals |
+| `⊂` | enclose | |
+| `⊃` | disclose | pick |
+| `≡` | depth | match |
+| `f¨` | each | each |
 | `⍎` | execute | |
 | `/ ⌿` | | compress |
 | `\ ⍀` | | expand |
@@ -170,7 +174,8 @@ quotes is an ordinary character.
 
 # Arrays
 
-All data are arrays. An element of an array is a number or a character.
+All data are arrays. An element of an array is a number, a character,
+or another array (see [Nested arrays](#nested-arrays)).
 An array has a *shape*, the list of its lengths along each axis, and a
 *rank*, the number of axes.
 
@@ -1058,6 +1063,185 @@ V[1 2]←1 2 3
 The wrong number of indices also gives *Non-scalar indices*, as in the
 original.
 
+# Nested arrays
+
+An element of an array may itself be an array that is not a simple
+scalar. Such an element is an *item*, and the array is *nested*.
+
+## Strands
+
+Values written next to each other form a vector of those values. Use
+parentheses to make an item of a vector or an expression. The numbers
+of a constant like `1 2` are separate items.
+
+```apl
+      1 2 (3 4)
+1 2  3 4
+      ⍴1 2 (3 4)
+3
+      'AB' 'CD'
+ AB  CD
+      A←5
+      B←6 7
+      ⍴A B
+2
+```
+
+## Display
+
+A nested item is shown with a blank before it, so items stand apart.
+Items that take several lines line up by rows.
+
+```apl
+      X←1 (2 3) 'ABC'
+      X
+1  2 3  ABC
+      (2 2⍴⍳4) 'X'
+ 1 2 X
+ 3 4
+```
+
+## Depth `≡X`
+
+0 for a simple scalar, 1 for a simple array, and one more than the
+deepest item for a nested array.
+
+```apl
+      ≡5
+0
+      ≡1 2
+1
+      ≡1 (2 (3 4))
+3
+```
+
+## Enclose and disclose `⊂X`, `⊃X`
+
+`⊂X` is a scalar holding X; a simple scalar stays as it is. `⊃X` makes
+one array of the items of X: their axes follow the axes of X, and
+smaller items are padded with fill elements.
+
+```apl
+      ⊂1 2
+ 1 2
+      ⍴⊂1 2
+
+      ⊃(1 2)(3 4 5)
+1 2 0
+3 4 5
+      ⊃'ABC' 'DEF'
+ABC
+DEF
+```
+
+Indexing a nested array gives scalars holding the items; `↑X` gives the
+first item itself.
+
+```apl
+      X←1 (2 3) 'ABC'
+      X[2]
+ 2 3
+      ↑(1 2)(3 4)
+1 2
+```
+
+## Pick `A⊃B`
+
+Each element of A selects an item at the next level of B. For an item
+of a matrix, the element of A is a vector of two indices, so it is
+enclosed.
+
+```apl
+      2⊃1 (2 3) 'ABC'
+2 3
+      (2 1)⊃(1 2)(3 4 5)
+3
+      (⊂2 1)⊃2 2⍴'ABCD'
+C
+```
+
+## Enlist `∊X`
+
+All simple scalars of X, at any depth, as a vector.
+
+```apl
+      ∊1 (2 3) (4 (5 6))
+1 2 3 4 5 6
+```
+
+## Match `A≡B`
+
+1 if A and B have the same shape and the same items at every depth.
+
+```apl
+      (1 2)≡1 2
+1
+      'A'≡,'A'
+0
+```
+
+## Scalar functions on nested arrays
+
+Scalar functions apply to the simple scalars inside the items.
+
+```apl
+      1 2 (3 4)+10
+11 12  13 14
+      (1 2)(3 4)×10 20
+ 10 20  60 80
+```
+
+## Each `f¨`
+
+`f¨X` applies f to each item of X; `A f¨B` to corresponding items, a
+single item being used for all. f is any function, including user
+functions and derived functions like `+/`.
+
+```apl
+      ⍴¨1 2 (3 4) 'ABCD'
+     2  4
+      +/¨(1 2)(3 4 5)
+3 12
+      1 2 3⍴¨4 5 6
+ 4  5 5  6 6 6
+      ⌽¨'ABC' 'DE'
+ CBA  ED
+```
+
+## Strand assignment `(A B)←X`
+
+Assigns the items of X to the names in turn; a single item goes to
+every name.
+
+```apl
+      (P Q)←10 (20 30)
+      Q
+20 30
+```
+
+## Selective assignment `(f V)←X`
+
+The left side is an expression that selects elements from a variable:
+the variable at its right end, with indexing and the functions
+`↑ ↓ , ⍪ ⌽ ⊖ ⍉ / ⌿ \ ⍀ ⍴` (other parts, like the left argument of `/`,
+are ordinary expressions). The selected elements get the items of X.
+
+```apl
+      V←⍳5
+      (2↑V)←0
+      V
+0 0 3 4 5
+      ((V>2)/V)←9
+      V
+0 0 9 9 9
+      M←3 3⍴0
+      (1 1⍉M)←1
+      M
+1 0 0
+0 1 0
+0 0 1
+```
+
 # Input and output
 
 ## Display
@@ -1540,6 +1724,8 @@ goapl adds to the language of the Pascal original:
 - Scan, axis, `⌿ ⍀`, N-wise reduction, expand.
 - Catenate on any rank, laminate, `⍪ ⌽ ⊖ ⍉ ↑ ↓ ∊ ~ ⍋ ⍒ ⊥ ⊤ ⌹`.
 - Format `⍕`, execute `⍎`, folding of long lines.
+- Nested arrays: strands, `⊂ ⊃ ≡ ∊`, each, strand and selective
+  assignment.
 
 goapl follows APL2 where the original differs:
 
@@ -1574,12 +1760,15 @@ expr       := fn expr
             | name [ index ] ← expr
             | ⎕ ← expr
             | ⍞ ← expr
-            | operand [ fn expr ]
+            | ( name { name } ) ← expr
+            | ( selection ) ← expr
+            | strand [ fn expr ]
+strand     := operand { operand }
 operand    := ( number... | 'string' | name | niladic-fn | ⎕ | ⍞ | ( expr ) )
               { [ index ] }
 index      := [ expr ] { ; [ expr ] }
-fn         := ( primitive | primitive op ) [ [ expr ] ]
-            | primitive . primitive | ∘ . primitive | user-fn
+fn         := ( ( primitive | primitive op ) [ [ expr ] ]
+            | primitive . primitive | ∘ . primitive | user-fn ) { ¨ }
 op         := / | ⌿ | \ | ⍀
 name       := variable | ⎕IO | ⎕CT | ⎕PP | ⎕PW | ⎕RL
 header     := ∇ [ name ← ] [ name ] name [ name ] { ; name }
@@ -1612,13 +1801,17 @@ header     := ∇ [ name ← ] [ name ] name [ name ] { ; name }
 | `⍉` | Y transposed | Y with axes moved to X |
 | `↑` | first of Y | first X of Y |
 | `↓` | | Y without first X |
-| `∊` | | X occurs in Y |
+| `∊` | simple scalars of Y | X occurs in Y |
 | `~` | | X without Y |
 | `⍋ ⍒` | sorting indices of Y | same, collating sequence X |
 | `⊥` | | Y in radix X |
 | `⊤` | | digits of Y in radix X |
 | `⌹` | inverse of Y | X divided by matrix Y |
 | `⍕` | characters displaying Y | Y in fixed format X |
+| `⊂` | Y as a scalar | |
+| `⊃` | items of Y as one array | item X of Y |
+| `≡` | depth of Y | X and Y are the same |
+| `f¨` | f on each item of Y | f on each pair of items |
 | `⍎` | value of statement Y | |
 | `/ ⌿` | | Y replicated by X |
 | `\ ⍀` | | Y expanded by X |

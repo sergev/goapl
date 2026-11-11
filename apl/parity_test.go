@@ -90,14 +90,12 @@ func parityCases() []parityCase {
 		{name: "quad_alone", lines: []string{"⎕", "5"}, want: "⎕:\n5"},
 		// glyphs in APLCharSet that are not functions
 		{name: "charset_only_DoubleQuote", lines: []string{`1"2`}, class: SyntaxError},
-		{name: "charset_only_omega", lines: []string{"1ω2"}, class: SyntaxError},
-		{name: "charset_only_alpha", lines: []string{"1α2"}, class: SyntaxError},
-		{name: "charset_only_UnderScore", lines: []string{"1_2"}, class: SyntaxError},
+		{name: "charset_only_omega", lines: []string{"1ω2"}, class: ValueError},
+		{name: "charset_only_alpha", lines: []string{"1α2"}, class: ValueError},
+		{name: "charset_only_UnderScore", lines: []string{"1_2"}, class: ValueError},
 		{name: "charset_only_del", lines: []string{"1∇2"}, class: SyntaxError},
-		{name: "charset_only_delta", lines: []string{"1∆2"}, class: SyntaxError},
+		{name: "charset_only_delta", lines: []string{"1∆2"}, class: ValueError},
 		{name: "charset_only_SingleQuote", lines: []string{"1'2"}, class: SyntaxError},
-		{name: "charset_only_EastCap", lines: []string{"1⊃2"}, class: SyntaxError},
-		{name: "charset_only_WestCap", lines: []string{"1⊂2"}, class: SyntaxError},
 		{name: "charset_only_NorthCap", lines: []string{"1∪2"}, class: SyntaxError},
 		{name: "charset_only_LeftBracket", lines: []string{"1[2]"}, class: RankError},
 
@@ -114,6 +112,8 @@ func parityCases() []parityCase {
 		{name: "differs_DownArrow", lines: []string{"⍴1↓2"}, want: "0"},
 		{name: "differs_ibeam", lines: []string{"1⊥2"}, want: "2"},
 		{name: "differs_TBeam", lines: []string{"1⊤2"}, want: "0"},
+		{name: "differs_EastCap", lines: []string{"1⊃2"}, class: RankError},
+		{name: "differs_WestCap", lines: []string{"1⊂2"}, class: NonceError},
 		// 1?2 was an error; ? is deal.
 		{name: "differs_QuestionMark", lines: []string{"1?2"}, want: "1"},
 		// Reducing a scalar, one item or an empty axis were errors.

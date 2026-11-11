@@ -4,19 +4,22 @@ package apl
 //
 //	stmt    := → expr | expr
 //	expr    := fn expr | name ← expr | name [index] ← expr | ⎕ ← expr
-//	         | operand [fn expr]
-//	         | ⍞ ← expr
+//	         | ⍞ ← expr | ( name {name} ) ← expr | ( select ) ← expr
+//	         | strand [fn expr]
+//	strand  := operand {operand}
 //	operand := (number | string | name | niladic | ⎕ | ⍞ | ( expr )) {[index]}
 //	index   := [expr] {; [expr]}
-//	fn      := (prim | prim op) [axis] | prim . prim | ∘ . prim | user function
+//	fn      := ((prim | prim op) [axis] | prim . prim | ∘ . prim | user function) {¨}
 //	op      := / | ⌿ | \ | ⍀
 //	axis    := [expr]
+//	select  := expr of selection functions and indexing, with a name at its right
 
 type node interface{ pos() int }
 
 type constNode struct {
-	val *Array
-	at  int
+	val    *Array
+	at     int
+	strand bool // numeric vector constant: separate items in a strand
 }
 
 type varNode struct {
@@ -64,6 +67,29 @@ type branchNode struct {
 	right node
 }
 
+type strandNode struct { // A B (C D)
+	items []node
+	at    int
+}
+
+type strandAssignNode struct { // (A B)←X
+	names []string
+	at    int
+	right node
+}
+
+type selAssignNode struct { // (select V)←X
+	name  string
+	sel   node // selection applied to a posNode for V
+	at    int
+	right node
+}
+
+type posNode struct { // positions 1..n of the elements of variable name
+	name string
+	at   int
+}
+
 type monadNode struct {
 	fn    *fnNode
 	right node
@@ -83,14 +109,16 @@ const (
 	fnInner                // f.g
 	fnOuter                // ∘.f
 	fnUser                 // user-defined function
+	fnEach                 // f¨
 )
 
 type fnNode struct {
 	kind  fnKind
-	glyph string // f
-	g     string // g of inner product
-	first bool   // operator applies along the first axis: ⌿ ⍀
-	axis  node   // [k], or nil
+	glyph string  // f
+	g     string  // g of inner product
+	first bool    // operator applies along the first axis: ⌿ ⍀
+	axis  node    // [k], or nil
+	inner *fnNode // f of f¨
 	user  *Function
 	at    int
 }
@@ -107,7 +135,13 @@ func (n *quadInNode) pos() int  { return n.at }
 func (n *quadOutNode) pos() int { return n.at }
 func (n *branchNode) pos() int  { return n.at }
 func (n *monadNode) pos() int   { return n.fn.at }
-func (n *dyadNode) pos() int    { return n.left.pos() }
+func (n *strandNode) pos() int  { return n.at }
+func (n *strandAssignNode) pos() int {
+	return n.at
+}
+func (n *selAssignNode) pos() int { return n.at }
+func (n *posNode) pos() int       { return n.at }
+func (n *dyadNode) pos() int      { return n.left.pos() }
 
 type parser struct {
 	toks []Token
@@ -222,6 +256,11 @@ func (p *parser) expr() (node, error) {
 		}
 		return &assignNode{name: t.Text, at: t.Pos, right: r}, nil
 	}
+	if isSpecial(t, "(") {
+		if n, ok, err := p.parenAssign(); ok || err != nil {
+			return n, err
+		}
+	}
 	if p.atFn() {
 		f, err := p.fn()
 		if err != nil {
@@ -260,7 +299,7 @@ func (p *parser) expr() (node, error) {
 		}
 		return &indexAssignNode{name: t.Text, idx: idx, at: t.Pos, right: r}, nil
 	}
-	left, err := p.operand()
+	left, err := p.strand()
 	if err != nil {
 		return nil, err
 	}
@@ -305,6 +344,19 @@ func (p *parser) indexAssignAhead() bool {
 }
 
 func (p *parser) fn() (*fnNode, error) {
+	f, err := p.fnBase()
+	for err == nil {
+		t, ok := p.peek()
+		if !ok || t.Kind != Prim || t.Text != "¨" {
+			break
+		}
+		p.i++
+		f = &fnNode{kind: fnEach, inner: f, at: t.Pos}
+	}
+	return f, err
+}
+
+func (p *parser) fnBase() (*fnNode, error) {
 	t, _ := p.peek()
 	p.i++
 	if f := p.userFn(t); f != nil {
@@ -326,6 +378,9 @@ func (p *parser) fn() (*fnNode, error) {
 		}
 		p.i += 2
 		return &fnNode{kind: fnInner, glyph: t.Text, g: g.Text, at: t.Pos}, nil
+	}
+	if t.Text == "¨" {
+		return nil, errorAt(SyntaxError, t.Pos)
 	}
 	f := &fnNode{kind: fnPrim, glyph: t.Text, at: t.Pos}
 	if op, ok := p.peek(); ok && op.Kind == Prim && isSlash(op.Text) && !isSlash(t.Text) {
@@ -358,6 +413,142 @@ func (p *parser) fn() (*fnNode, error) {
 // isSlash reports whether g is one of the operators / ⌿ \ ⍀, which are
 // also the functions compress and expand.
 func isSlash(g string) bool { return g == "/" || g == "⌿" || g == "\\" || g == "⍀" }
+
+// startsOperand reports whether an operand of a strand starts here.
+func (p *parser) startsOperand() bool {
+	t, ok := p.peek()
+	if !ok {
+		return false
+	}
+	next, _ := p.peekAt(1)
+	switch {
+	case t.Kind == Number, t.Kind == String, isSpecial(t, "("):
+		return true
+	case t.Kind == Name:
+		f := p.userFn(t)
+		return (f == nil || f.Arity() == 0) && !isSpecial(next, "←")
+	case isSpecial(t, "⎕"), isSpecial(t, "⍞"):
+		return !isSpecial(next, "←")
+	}
+	return false
+}
+
+// strand parses juxtaposed operands; several make a vector whose items
+// are their values. The numbers of a numeric constant are separate items.
+func (p *parser) strand() (node, error) {
+	var items []node
+	at := p.here()
+	for len(items) == 0 || p.startsOperand() {
+		n, err := p.operand()
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, n)
+	}
+	if len(items) == 1 {
+		return items[0], nil
+	}
+	var flat []node
+	for _, n := range items {
+		if c, ok := n.(*constNode); ok && c.strand {
+			for _, v := range c.val.Data {
+				flat = append(flat, &constNode{val: Scalar(v), at: c.at})
+			}
+			continue
+		}
+		flat = append(flat, n)
+	}
+	return &strandNode{items: flat, at: at}, nil
+}
+
+// parenAssign parses "( names ) ← expr" and "( selection ) ← expr";
+// ok is false if no such assignment starts here.
+func (p *parser) parenAssign() (node, bool, error) {
+	depth, m := 0, -1
+	for k := p.i; k < len(p.toks) && m < 0; k++ {
+		if isSpecial(p.toks[k], "(") {
+			depth++
+		} else if isSpecial(p.toks[k], ")") {
+			if depth--; depth == 0 {
+				m = k
+			}
+		}
+	}
+	if m < 0 || m+1 >= len(p.toks) || !isSpecial(p.toks[m+1], "←") {
+		return nil, false, nil
+	}
+	start := p.toks[p.i].Pos
+	var names []string
+	for k := p.i + 1; k < m; k++ {
+		t := p.toks[k]
+		if t.Kind != Name || p.userFn(t) != nil {
+			names = nil
+			break
+		}
+		names = append(names, t.Text)
+	}
+	if len(names) > 0 {
+		p.i = m + 2
+		r, err := p.expr()
+		if err != nil {
+			return nil, true, err
+		}
+		return &strandAssignNode{names: names, at: start, right: r}, true, nil
+	}
+	p.i++
+	sel, err := p.expr()
+	if err != nil {
+		return nil, true, err
+	}
+	if p.i != m {
+		return nil, true, errorAt(SyntaxError, p.here())
+	}
+	sel, name, err := selection(sel)
+	if err != nil {
+		return nil, true, err
+	}
+	p.i = m + 2
+	r, err := p.expr()
+	if err != nil {
+		return nil, true, err
+	}
+	return &selAssignNode{name: name, sel: sel, at: start, right: r}, true, nil
+}
+
+// selectFns may appear in a selective assignment: [monadic, dyadic].
+var selectFns = map[string][2]bool{
+	"↑": {true, true}, "↓": {false, true}, ",": {true, true}, "⍪": {false, true},
+	"⌽": {true, true}, "⊖": {true, true}, "⍉": {true, true}, "/": {false, true},
+	"⌿": {false, true}, "\\": {false, true}, "⍀": {false, true}, "⍴": {false, true},
+}
+
+// selection replaces the variable at the right end of a selective
+// assignment target by its positions, and gives the variable's name.
+func selection(n node) (node, string, error) {
+	switch n := n.(type) {
+	case *varNode:
+		return &posNode{name: n.name, at: n.at}, n.name, nil
+	case *indexNode:
+		t, name, err := selection(n.target)
+		n.target = t
+		return n, name, err
+	case *monadNode:
+		if n.fn.kind != fnPrim || !selectFns[n.fn.glyph][0] {
+			return nil, "", errorAt(SyntaxError, n.fn.at)
+		}
+		r, name, err := selection(n.right)
+		n.right = r
+		return n, name, err
+	case *dyadNode:
+		if n.fn.kind != fnPrim || !selectFns[n.fn.glyph][1] {
+			return nil, "", errorAt(SyntaxError, n.fn.at)
+		}
+		r, name, err := selection(n.right)
+		n.right = r
+		return n, name, err
+	}
+	return nil, "", errorAt(SyntaxError, n.pos())
+}
 
 func (p *parser) operand() (node, error) {
 	n, err := p.primary()
@@ -416,7 +607,7 @@ func (p *parser) primary() (node, error) {
 		if len(t.Nums) == 1 {
 			v = Scalar(t.Nums[0])
 		}
-		return &constNode{val: v, at: t.Pos}, nil
+		return &constNode{val: v, at: t.Pos, strand: len(t.Nums) > 1}, nil
 	case t.Kind == String:
 		p.i++
 		v := Chars(t.Text)
@@ -443,6 +634,9 @@ func (p *parser) primary() (node, error) {
 			return nil, errorAt(SyntaxError, t.Pos)
 		}
 		p.i++
+		if c, ok := n.(*constNode); ok && c.strand {
+			n = &constNode{val: c.val, at: c.at} // (1 2) is one item
+		}
 		return n, nil
 	}
 	return nil, errorAt(SyntaxError, t.Pos)
