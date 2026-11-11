@@ -1,5 +1,7 @@
 package apl
 
+import "strings"
+
 // Arrays are treated as immutable once built; results never alias
 // mutable state, so values may be shared between variables.
 
@@ -217,6 +219,9 @@ func (in *Interp) monad(f *fnNode, ax, x *Array) (*Array, error) {
 	case fnInner, fnOuter:
 		return nil, newError(SyntaxError)
 	}
+	if f.glyph == "⍎" && ax == nil {
+		return in.execute(x)
+	}
 	sf, st := scalarFns[f.glyph], structFns[f.glyph]
 	if st != nil && st.monadAxis != nil {
 		return st.monadAxis(&in.env, ax, x)
@@ -269,4 +274,38 @@ func (in *Interp) dyad(f *fnNode, ax, a, b *Array) (*Array, error) {
 		return nil, newError(ValenceError)
 	}
 	return nil, newError(NonceError)
+}
+
+// execute is ⍎X: runs the character vector X as a statement and gives
+// its value, or nil if it has none.
+func (in *Interp) execute(x *Array) (*Array, error) {
+	if x.Rank() > 1 {
+		return nil, newError(RankError)
+	}
+	if x.Size() > 0 && !x.IsCharacter() {
+		return nil, newError(DomainError)
+	}
+	var b strings.Builder
+	for i := range x.Size() {
+		b.WriteRune(rune(x.At(i).(Char)))
+	}
+	text := b.String()
+	toks, err := Lex(text)
+	var n node
+	if err == nil {
+		n, err = in.parse(toks, len([]rune(text)))
+	}
+	if err == nil {
+		if _, ok := n.(*branchNode); ok {
+			err = errorAt(DomainError, 0)
+		}
+	}
+	var v *Array
+	if err == nil && n != nil {
+		v, err = in.evalNode(n)
+	}
+	if e, ok := err.(*Error); ok && e.Src == "" {
+		e.Src, e.Where = text, "⍎"
+	}
+	return v, err
 }

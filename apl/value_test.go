@@ -158,3 +158,23 @@ func TestFormatGeneral(t *testing.T) {
 		t.Errorf("unknown element: %q", got)
 	}
 }
+
+func TestWrap(t *testing.T) {
+	cases := []struct {
+		in    string
+		width int
+		want  string
+	}{
+		{"1 2 3", 30, "1 2 3"},
+		{"aaaa bbbb cccc", 10, "aaaa bbbb\n      cccc"},
+		{"abcdefghij", 8, "abcdefgh\n      ij"},
+		{"abcdefghij", 4, "abcd\n      e\n      f\n      g\n      h\n      i\n      j"},
+		{"12 34\n56 78", 8, "12 34\n56 78"},
+		{"12 34 56", 6, "12 34\n      5\n      6"},
+	}
+	for _, c := range cases {
+		if got := wrap(c.in, c.width); got != c.want {
+			t.Errorf("wrap(%q, %d) = %q, want %q", c.in, c.width, got, c.want)
+		}
+	}
+}

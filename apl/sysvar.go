@@ -7,6 +7,7 @@ type env struct {
 	io int     // ⎕IO index origin
 	ct float64 // ⎕CT comparison tolerance
 	pp int     // ⎕PP print precision
+	pw int     // ⎕PW print width
 	rl int64   // ⎕RL random link
 }
 
@@ -14,15 +15,20 @@ type env struct {
 const (
 	defaultCT = 1e-13
 	defaultPP = 10
+	defaultPW = 80
+	minPW     = 30
+	maxPW     = 1000
 	defaultRL = 16807
 	maxPP     = 17
 	maxRL     = 1<<31 - 2
 )
 
-func defaultEnv() env { return env{io: 1, ct: defaultCT, pp: defaultPP, rl: defaultRL} }
+func defaultEnv() env {
+	return env{io: 1, ct: defaultCT, pp: defaultPP, pw: defaultPW, rl: defaultRL}
+}
 
 // sysVars lists the system variables.
-var sysVars = map[string]bool{"⎕IO": true, "⎕CT": true, "⎕PP": true, "⎕RL": true}
+var sysVars = map[string]bool{"⎕IO": true, "⎕CT": true, "⎕PP": true, "⎕PW": true, "⎕RL": true}
 
 func isSysName(name string) bool { return len(name) > 0 && []rune(name)[0] == '⎕' }
 
@@ -34,6 +40,8 @@ func (e *env) get(name string) *Array {
 		return Scalar(e.ct)
 	case "⎕PP":
 		return Scalar(float64(e.pp))
+	case "⎕PW":
+		return Scalar(float64(e.pw))
 	}
 	return Scalar(float64(e.rl))
 }
@@ -65,6 +73,11 @@ func (e *env) set(name string, v *Array) error {
 			return newError(DomainError)
 		}
 		e.pp = min(n, maxPP)
+	case "⎕PW":
+		if !isInt || n < minPW || n > maxPW {
+			return newError(DomainError)
+		}
+		e.pw = n
 	case "⎕RL":
 		if !isInt || n < 1 || n > maxRL {
 			return newError(DomainError)

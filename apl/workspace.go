@@ -66,7 +66,7 @@ func withSrc(err error, src string) error {
 
 func (in *Interp) print(v *Array) error {
 	in.endLine()
-	_, err := fmt.Fprintln(in.out, in.paint(styleResult, format(v, in.pp)))
+	_, err := fmt.Fprintln(in.out, in.paint(styleResult, wrap(format(v, in.pp), in.pw)))
 	return err
 }
 

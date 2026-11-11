@@ -146,6 +146,8 @@ quotes is an ordinary character.
 | `⊥` | | decode |
 | `⊤` | | encode |
 | `⌹` | matrix inverse | matrix divide |
+| `⍕` | format | format with width and decimals |
+| `⍎` | execute | |
 | `/ ⌿` | | compress |
 | `\ ⍀` | | expand |
 | `f/ f⌿` | reduction | N-wise reduction |
@@ -1151,6 +1153,69 @@ NAME? JOHN SMITH
 10
 ```
 
+## Format `⍕X`, `A⍕B`
+
+`⍕X` gives the characters that display X: a character vector for a
+scalar or vector, a matrix for a matrix. It follows `⎕PP`.
+
+```apl
+      ⍴⍕123
+3
+      'X=',⍕42
+X=42
+      ⍴⍕2 3⍴1 10 100
+2 8
+```
+
+`A⍕B` formats numbers in fixed columns. A is a width and a number of
+decimals, used for every column, or one such pair per column. A single
+number gives just the decimals, and each column gets the width it needs
+plus a blank; a width of 0 does the same. Negative decimals give that
+many significant digits in `E` notation. A number too wide for its
+field shows `*`.
+
+```apl
+      8 2⍕3.14159 ¯2
+    3.14   ¯2.00
+      2⍕3.14159 2
+ 3.14 2.00
+      ¯3⍕1234 0.5
+ 1.23E3 5.00E¯1
+      3 1⍕100
+***
+```
+
+## Execute `⍎X`
+
+`⍎X` runs the character vector X as a statement and gives its value. An
+error inside shows the executed text after `⍎`. A branch cannot be
+executed.
+
+```apl
+      ⍎'1+2'
+3
+      S←'+/⍳10'
+      ⍎S
+55
+      ⍎'1÷0'
+DOMAIN ERROR
+⍎ 1÷0
+   ^
+```
+
+## Print width `⎕PW`
+
+A displayed line longer than `⎕PW` characters is folded. The
+continuation lines are indented by six blanks, and lines break between
+numbers where possible.
+
+```text
+      ⎕PW←30
+      ⍳20
+1 2 3 4 5 6 7 8 9 10 11 12 13
+      14 15 16 17 18 19 20
+```
+
 # System variables
 
 System variables are names starting with `⎕` that control the
@@ -1162,6 +1227,7 @@ a value.
 | `⎕IO` | index origin | 1 | 0 or 1 |
 | `⎕CT` | comparison tolerance | 1E¯13 | 0 to just below 1 |
 | `⎕PP` | print precision, in digits | 10 | 1 or more; above 17 means 17 |
+| `⎕PW` | print width, in characters | 80 | 30 to 1000 |
 | `⎕RL` | random link, the seed of `?` | 16807 | 1 to ¯2+2*31 |
 
 A value outside the allowed range is a `DOMAIN ERROR`; an unknown `⎕`
@@ -1469,10 +1535,11 @@ goapl adds to the language of the Pascal original:
 - Comparison tolerance.
 - Arrays of any rank (the original stopped at 3).
 - Characters, strings and `⍞`.
-- System variables `⎕IO ⎕CT ⎕PP ⎕RL`.
+- System variables `⎕IO ⎕CT ⎕PP ⎕PW ⎕RL`.
 - `○ ! ?` monadic and dyadic, `⍲ ⍱`.
 - Scan, axis, `⌿ ⍀`, N-wise reduction, expand.
 - Catenate on any rank, laminate, `⍪ ⌽ ⊖ ⍉ ↑ ↓ ∊ ~ ⍋ ⍒ ⊥ ⊤ ⌹`.
+- Format `⍕`, execute `⍎`, folding of long lines.
 
 goapl follows APL2 where the original differs:
 
@@ -1514,7 +1581,7 @@ index      := [ expr ] { ; [ expr ] }
 fn         := ( primitive | primitive op ) [ [ expr ] ]
             | primitive . primitive | ∘ . primitive | user-fn
 op         := / | ⌿ | \ | ⍀
-name       := variable | ⎕IO | ⎕CT | ⎕PP | ⎕RL
+name       := variable | ⎕IO | ⎕CT | ⎕PP | ⎕PW | ⎕RL
 header     := ∇ [ name ← ] [ name ] name [ name ] { ; name }
 ```
 
@@ -1551,6 +1618,8 @@ header     := ∇ [ name ← ] [ name ] name [ name ] { ; name }
 | `⊥` | | Y in radix X |
 | `⊤` | | digits of Y in radix X |
 | `⌹` | inverse of Y | X divided by matrix Y |
+| `⍕` | characters displaying Y | Y in fixed format X |
+| `⍎` | value of statement Y | |
 | `/ ⌿` | | Y replicated by X |
 | `\ ⍀` | | Y expanded by X |
 | `f/ f⌿` | reduce Y by f | reduce windows of X items |

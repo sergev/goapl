@@ -30,6 +30,7 @@ var structFns = map[string]*structFn{
 	"⊥":  {dyad: decode},
 	"⊤":  {dyad: encode},
 	"⌹":  {monad: inverse, dyad: matDivide},
+	"⍕":  {monad: formatFn, dyad: formatWidth},
 	"?":  {dyad: deal},
 }
 

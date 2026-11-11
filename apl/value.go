@@ -64,6 +64,19 @@ func (a *Array) Size() int {
 // IsScalar reports whether a has rank 0.
 func (a *Array) IsScalar() bool { return len(a.Shape) == 0 }
 
+// IsCharacter reports whether all elements of a are characters.
+func (a *Array) IsCharacter() bool {
+	if a.Elems == nil {
+		return false
+	}
+	for _, v := range a.Elems {
+		if _, ok := v.(Char); !ok {
+			return false
+		}
+	}
+	return true
+}
+
 // IsNumeric reports whether all elements of a are numbers.
 func (a *Array) IsNumeric() bool { return a.Elems == nil }
 

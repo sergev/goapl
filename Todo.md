@@ -10,13 +10,7 @@ APL2 error classes and behavior where the original differs (T1);
 arrays of any rank with general (character, mixed, nested) elements (T2);
 `⎕IO ⎕CT ⎕PP ⎕RL` (T3); characters, strings and `⍞` (T4);
 `○ ! ? ⍲ ⍱` (T5); scan, axis, N-wise reduction, expand (T6);
-`, ⍪ ⌽ ⊖ ⍉ ↑ ↓ ∊ ~ ⍋ ⍒ ⊥ ⊤ ⌹` (T7).
-
-## T8. Format and execute
-
-- `⍕` format, monadic and dyadic (width and precision).
-- `⍎` execute.
-- Output of large arrays: wrap long lines at a print width (`⎕PW`).
+`, ⍪ ⌽ ⊖ ⍉ ↑ ↓ ∊ ~ ⍋ ⍒ ⊥ ⊤ ⌹` (T7); `⍕ ⍎ ⎕PW` (T8).
 
 ## T9. Nested arrays
 

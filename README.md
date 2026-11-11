@@ -50,12 +50,12 @@ session, as in the original.
 
 | Kind      | Glyphs |
 |-----------|--------|
-| Monadic   | `+` identity, `-` negate, `×` signum, `÷` reciprocal, `*` exp, `~` not, `⍳` index generator, `⍴` shape, `,` ravel, `⌽ ⊖` reverse, `⍉` transpose, `↑` first, `⍋ ⍒` grade, `⌹` matrix inverse |
-| Dyadic    | `+ - × ÷ *`, `⍳` index of, `⍴` reshape, `, ⍪` catenate and laminate (with axis), `⌽ ⊖` rotate, `⍉` transpose, `↑ ↓` take, drop, `∊` membership, `~` without, `⍋ ⍒` grade with collating sequence, `⊥ ⊤` decode, encode, `⌹` matrix divide, `= ≠ < ≤ ≥ >`, `∧ ∨` |
+| Monadic   | `+` identity, `-` negate, `×` signum, `÷` reciprocal, `*` exp, `~` not, `⍳` index generator, `⍴` shape, `,` ravel, `⌽ ⊖` reverse, `⍉` transpose, `↑` first, `⍋ ⍒` grade, `⌹` matrix inverse, `⍕` format, `⍎` execute |
+| Dyadic    | `+ - × ÷ *`, `⍳` index of, `⍴` reshape, `, ⍪` catenate and laminate (with axis), `⌽ ⊖` rotate, `⍉` transpose, `↑ ↓` take, drop, `∊` membership, `~` without, `⍋ ⍒` grade with collating sequence, `⊥ ⊤` decode, encode, `⌹` matrix divide, `⍕` format with width, `= ≠ < ≤ ≥ >`, `∧ ∨` |
 | Operators | `f/` reduction (scalars, one element and empty axes as in APL2), `N f/X` N-wise reduction, `f\` scan, `⌿ ⍀` and `[K]` axis, `f.g` inner product, `∘.f` outer product |
 | Added     | `⌈ ⌊` ceiling/floor, max/min; `\|` magnitude/residue; `⍟` natural log, log to base; `○` pi times, circular functions; `!` factorial, binomial; `?` roll, deal; `⍲ ⍱` nand, nor; `A/B` compress, `A\B` expand |
 | Other     | `←` assignment, `A[I;J]` indexing and indexed assignment, `⎕` input/output, `⍞` character input/output, `→` branch, labels |
-| System    | `⎕IO` index origin, `⎕CT` comparison tolerance, `⎕PP` print precision, `⎕RL` random link; localizable in headers |
+| System    | `⎕IO` index origin, `⎕CT` comparison tolerance, `⎕PP` print precision, `⎕PW` print width, `⎕RL` random link; localizable in headers |
 | Functions | `∇` definitions: niladic, monadic, dyadic, with or without explicit result |
 
 Data are arrays of any rank of numbers (floating point) and characters (`'IT''S'`); `=` and `≠` compare characters. Errors are reported by
@@ -107,7 +107,7 @@ R←R×I
 `make test` runs unit tests and golden tests. Each `testdata/*.apl` script
 covers one area of the language (lexical rules, monadic and dyadic
 functions, reduction, structural functions, products, indexing, syntax,
-user functions, `⎕`, output format, edge cases, system variables, characters, more scalar functions, axis, rearranging functions), with `⍝` comments saying
+user functions, `⎕`, output format, edge cases, system variables, characters, more scalar functions, axis, rearranging functions, format and execute), with `⍝` comments saying
 what each group checks. It is run as an interactive session, and the
 transcript (input after the prompt, then output) is compared with the
 matching `.out` file.

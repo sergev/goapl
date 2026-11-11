@@ -45,7 +45,7 @@ func (t Token) String() string {
 }
 
 const (
-	primGlyphs    = "+-×÷*⍳⍴,⍪~=≠<≤≥>∧∨⍲⍱⌈⌊○/⌿\\⍀?↑↓⊥⊤|ε∊⌽⊖⍉⍋⍒!⍟⌹"
+	primGlyphs    = "+-×÷*⍳⍴,⍪~=≠<≤≥>∧∨⍲⍱⌈⌊○/⌿\\⍀?↑↓⊥⊤|ε∊⌽⊖⍉⍋⍒!⍟⌹⍕⍎"
 	specialGlyphs = "←→∇⎕⍞()[];:.∘"
 )
 
