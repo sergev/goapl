@@ -24,7 +24,6 @@ compare: all
 pdf: Manual.pdf
 
 Manual.pdf: Manual.md tools/manual.typ
-	pandoc Manual.md -o Manual.pdf --pdf-engine=typst -H tools/manual.typ \
-		-V mainfont="DejaVu Serif" -V codefont="DejaVu Sans Mono"
+	pandoc Manual.md -o Manual.pdf --pdf-engine=typst -H tools/manual.typ
 
 .PHONY: all install clean test compare pdf
