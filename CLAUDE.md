@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-goapl is an APL interpreter in Go. It reimplements the 1978 Pascal APL
-interpreter from *Pascal News* #26 (source in `../../Besm-6/pascal-apl/`,
-`pnscanner.pas`), then grows toward APL2. `Todo.md` lists the next tasks
-(T1–T13); `Manual.md` is the language specification.
+goapl is an APL2 interpreter in Go. It began as a reimplementation of the
+1978 Pascal APL interpreter from *Pascal News* #26 (source in
+`../../Besm-6/pascal-apl/`, `pnscanner.pas`); where the two differ, goapl
+follows APL2. `Manual.md` is the language specification.
 
 ## Commands
 

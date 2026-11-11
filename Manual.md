@@ -5,12 +5,12 @@ subtitle: An APL interpreter in Go
 
 # Introduction
 
-goapl is an interpreter for APL, a language of arrays. It reproduces the
-APL interpreter written in Pascal by V. Dichristofano, A. Kaniss,
-T. Robinson and J. Santini (NADC / Villanova University), published in
-*Pascal News* #26 (1983) and *The BYTE Book of Pascal* (1979), and grows
-it toward APL2. Where the two differ, goapl follows APL2. This manual
-describes the language as goapl implements it.
+goapl is an interpreter for APL2, a language of arrays. It began as a
+re-implementation of the APL interpreter written in Pascal by
+V. Dichristofano, A. Kaniss, T. Robinson and J. Santini (NADC /
+Villanova University), published in *Pascal News* #26 (1983) and *The
+BYTE Book of Pascal* (1979); where that language and APL2 differ, goapl
+follows APL2. This manual describes the language as goapl implements it.
 
 ## Running goapl
 
