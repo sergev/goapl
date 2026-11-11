@@ -50,7 +50,7 @@ func TestColor(t *testing.T) {
 	var out bytes.Buffer
 	run(nil, strings.NewReader("1+2\n÷0\n"), &out, &out, false, true)
 	want := "\x1b[32m3\x1b[0m\n" +
-		"\x1b[1;31mAttempted inverse of zero\x1b[0m\n÷0\n\x1b[31m↑\x1b[0m\n"
+		"\x1b[1;31mDOMAIN ERROR\x1b[0m\n÷0\n\x1b[31m^\x1b[0m\n"
 	if out.String() != want {
 		t.Errorf("got %q, want %q", out.String(), want)
 	}

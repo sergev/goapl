@@ -5,8 +5,8 @@ An APL interpreter written in Go.
 It starts as a re-implementation of the APL interpreter published in
 *Pascal News* #26 (July 1983) and *The BYTE Book of Pascal* (1979), written
 in CDC Pascal by V. Dichristofano, A. Kaniss, T. Robinson and J. Santini
-(NADC / Villanova University). The goal is to reproduce that language
-first, then grow toward classic APL\360 / APL2.
+(NADC / Villanova University). It reproduced that language first and now
+grows toward APL2; where the two differ, goapl follows APL2.
 
 ## Build
 
@@ -46,19 +46,20 @@ session, as in the original.
 120
 ```
 
-## Language (prototype level)
+## Language
 
 | Kind      | Glyphs |
 |-----------|--------|
 | Monadic   | `+` identity, `-` negate, `×` signum, `÷` reciprocal, `*` exp, `~` not, `⍳` index generator, `⍴` shape, `,` ravel |
 | Dyadic    | `+ - × ÷ *`, `⍳` index of, `⍴` reshape, `,` catenate, `= ≠ < ≤ ≥ >`, `∧ ∨` |
-| Operators | `f/` reduction (also `⌈ ⌊ ○`; `○/` is log to base, as in the original), `f.g` inner product, `∘.f` outer product |
+| Operators | `f/` reduction (scalars, one element and empty axes as in APL2), `f.g` inner product, `∘.f` outer product |
 | Added     | `⌈ ⌊` ceiling/floor, max/min; `\|` magnitude/residue; `⍟` natural log, log to base; `A/B` compress |
 | Other     | `←` assignment, `A[I;J]` indexing and indexed assignment, `⎕` input/output, `→` branch, labels |
 | Functions | `∇` definitions: niladic, monadic, dyadic, with or without explicit result |
 
-Data are floating-point arrays of rank 0 to 3. Errors use the numbered
-messages of the original `APLfile`, in sentence case. `⍝` starts a comment. Comparisons use a tolerance of 1E¯13.
+Data are floating-point arrays of rank 0 to 3. Errors are reported by
+APL2 class (`DOMAIN ERROR`, `LENGTH ERROR`, ...). `⍝` starts a comment.
+Comparisons use a tolerance of 1E¯13.
 Indexing is more general than in the original: indices may be arrays
 (`V[2 4]`, `M[1 3;]`) and an axis may be elided (`M[;2]`); the original
 accepted scalar indices only. Output uses conventional APL notation (10 significant digits, `¯` for
@@ -84,8 +85,7 @@ R←R×I
   returns. `→` of an empty vector does nothing, so `→(cond)/L` branches
   conditionally. A label `L:` is a local constant equal to its line number.
 - The definition ends with a line `∇`, or with `∇` at the end of the last
-  statement. A function cannot be redefined (FUNCTION ALREADY DEFINED), as
-  in the original.
+  statement. A function cannot be redefined yet (DEFN ERROR).
 - An error inside a function aborts to the top level and shows where:
   `FACT[2] R←X÷0`.
 - `⎕←X` prints X. `⎕` prompts with `⎕:`, reads a line from the same input
@@ -116,18 +116,20 @@ the few deliberate differences are marked there.
 
 `make compare` builds the Pascal prototype with Free Pascal (into `build/`)
 and runs the cases of `tools/compare_cases.txt` through both interpreters,
-comparing printed numbers (the original shows two decimals) and error
-messages. Known differences are marked with `!` and explained in that file.
-They come from bugs in the original: it cannot use or display a
+comparing printed numbers (the original shows two decimals) and whether
+an error occurred. Known differences are marked with `!` and explained in
+that file. They come from bugs in the original (it cannot use or display a
 function's explicit result, crashes on `⎕` input, computes `¯2*2` as 0.25,
-and misses an unclosed parenthesis. After an
+and misses an unclosed parenthesis) and from APL2 behavior that goapl
+follows instead. After an
 intended change in output, regenerate them with `go test ./apl -update`
 and review the diff.
 
 ## Status
 
 Steps 1–5 done: the language of the original is implemented and passes
-the prototype's test suite. Next: growing toward APL2 (step 6).
+the prototype's test suite. Now growing toward APL2 (step 6); the tasks
+are listed in [Todo.md](Todo.md).
 
 ## License
 

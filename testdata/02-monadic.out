@@ -38,59 +38,59 @@
 0
       ⍝ Errors
       ÷0
-Attempted inverse of zero
+DOMAIN ERROR
 ÷0
-↑
+^
       ÷1 0
-Attempted inverse of zero
+DOMAIN ERROR
 ÷1 0
-↑
+^
       ~2
-Value not boolean
+DOMAIN ERROR
 ~2
-↑
+^
       ~0.5
-Value not boolean
+DOMAIN ERROR
 ~0.5
-↑
+^
       ⍟0
-Argument is negative
+DOMAIN ERROR
 ⍟0
-↑
+^
       ⍟¯1
-Argument is negative
+DOMAIN ERROR
 ⍟¯1
-↑
+^
       ⍝ Functions without a monadic form
       =5
-Monadic reference to dyadic operator
+VALENCE ERROR
 =5
-↑
+^
       ≠5
-Monadic reference to dyadic operator
+VALENCE ERROR
 ≠5
-↑
+^
       <5
-Monadic reference to dyadic operator
+VALENCE ERROR
 <5
-↑
+^
       ≤5
-Monadic reference to dyadic operator
+VALENCE ERROR
 ≤5
-↑
+^
       ≥5
-Monadic reference to dyadic operator
+VALENCE ERROR
 ≥5
-↑
+^
       >5
-Monadic reference to dyadic operator
+VALENCE ERROR
 >5
-↑
+^
       ∧1
-Monadic reference to dyadic operator
+VALENCE ERROR
 ∧1
-↑
+^
       ∨1
-Monadic reference to dyadic operator
+VALENCE ERROR
 ∨1
-↑
+^

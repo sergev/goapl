@@ -56,7 +56,14 @@ func TestEval(t *testing.T) {
 		{"=/1 1", "1"},
 		{"⌈/3 9 2", "9"},
 		{"⌊/3 9 2", "2"},
-		{"○/2 8", "3"},
+		{"+/5", "5"},
+		{"+/,5", "5"},
+		{"+/⍳0", "0"},
+		{"×/⍳0", "1"},
+		{"⌊/⍳0", "1.797693135E308"},
+		{"⍴+/2 0⍴0", "2"},
+		{"(2 0⍴0)+.×⍳0", "0 0"},
+		{"0÷0", "1"},
 		{"∧/1 1 0", "0"},
 		{"∨/1 0 0", "1"},
 	}
@@ -76,32 +83,37 @@ func TestAssign(t *testing.T) {
 
 func TestErrors(t *testing.T) {
 	cases := []struct {
-		in   string
-		code int
+		in    string
+		class Class
 	}{
-		{"8÷0", 20},
-		{"÷0", 54},
-		{"~2", 19},
-		{"2∧3", 19},
-		{"1 2+1 2 3", 55},
-		{"=5", 74},
-		{"(1+2", 15},
-		{"1+2)", 15},
-		{"X", 100},
-		{"+/5", 24},
-		{"+/1", 24},
-		{"2+/1 2", 73},
-		{"2+", 10},
-		{"1 2 (3)", 10},
-		{"~/1 0", 72},
-		{"/1 2", 72},
-		{"○/¯2 8", 50},
+		{"8÷0", DomainError},
+		{"÷0", DomainError},
+		{"~2", DomainError},
+		{"2∧3", DomainError},
+		{"1 2+1 2 3", LengthError},
+		{"=5", ValenceError},
+		{"(1+2", SyntaxError},
+		{"1+2)", SyntaxError},
+		{"X", ValueError},
+		{"2+/1 2", SyntaxError},
+		{"2+", SyntaxError},
+		{"1 2 (3)", SyntaxError},
+		{"~/1 0", SyntaxError},
+		{"/1 2", SyntaxError},
+		{"¯2⍟8", DomainError},
+		{"⍟/⍳0", DomainError},
+		{"○/2 8", SyntaxError},
+		{"1↑2", NonceError},
+		{"↑2", NonceError},
+		{"2~1", ValenceError},
+		{"/5", SyntaxError},
+		{"1 2+2 2⍴1", RankError},
 	}
 	for _, c := range cases {
 		err := New(&bytes.Buffer{}).Exec(c.in)
 		e, ok := err.(*Error)
-		if !ok || e.Code != c.code {
-			t.Errorf("%s: got %v, want code %d", c.in, err, c.code)
+		if !ok || e.Class != c.class {
+			t.Errorf("%s: got %v, want %v", c.in, err, c.class)
 		}
 	}
 }
@@ -193,45 +205,45 @@ func TestIndex(t *testing.T) {
 
 func TestStructuralErrors(t *testing.T) {
 	cases := []struct {
-		in   string
-		code int
+		in    string
+		class Class
 	}{
-		{"⍳1 2", 21},
-		{"⍳¯1", 22},
-		{"⍳2.5", 23},
-		{"(2 2⍴1)⍳1", 29},
-		{"(2 2⍴1)⍴1", 56},
-		{"2 2 2 2⍴1", 60},
-		{"(2 2⍴1),1", 53},
-		{"1 2+.×1 2 3", 52},
-		{"+.,1", 27},
-		{"1∘.⍳1", 26},
-		{"∘.+3", 13},
-		{"(⍳5)[6]", 38},
-		{"(⍳5)[0]", 38},
-		{"(⍳5)[1.5]", 37},
-		{"(⍳5)[1;1]", 35},
-		{"(⍳5)[1", 34},
-		{"V[1]←2", 100},
-		{"(2 2⍴⍳4)∘.+2 2⍴1", 60},
+		{"⍳1 2", LengthError},
+		{"⍳¯1", DomainError},
+		{"⍳2.5", DomainError},
+		{"(2 2⍴1)⍳1", RankError},
+		{"(2 2⍴1)⍴1", RankError},
+		{"2 2 2 2⍴1", SystemLimit},
+		{"(2 2⍴1),1", RankError},
+		{"1 2+.×1 2 3", LengthError},
+		{"+.,1", SyntaxError},
+		{"1∘.⍳1", SyntaxError},
+		{"∘.+3", SyntaxError},
+		{"(⍳5)[6]", IndexError},
+		{"(⍳5)[0]", IndexError},
+		{"(⍳5)[1.5]", DomainError},
+		{"(⍳5)[1;1]", RankError},
+		{"(⍳5)[1", SyntaxError},
+		{"V[1]←2", ValueError},
+		{"(2 2⍴⍳4)∘.+2 2⍴1", SystemLimit},
 	}
 	for _, c := range cases {
 		err := New(&bytes.Buffer{}).Exec(c.in)
 		e, ok := err.(*Error)
-		if !ok || e.Code != c.code {
-			t.Errorf("%s: got %v, want code %d", c.in, err, c.code)
+		if !ok || e.Class != c.class {
+			t.Errorf("%s: got %v, want %v", c.in, err, c.class)
 		}
 	}
 }
 
 func TestIndexAssignErrors(t *testing.T) {
 	cases := []struct {
-		in   string
-		code int
+		in    string
+		class Class
 	}{
-		{"V[1 2]←1 2 3", 36},
-		{"V[6]←1", 38},
-		{"V[1;1]←1", 35},
+		{"V[1 2]←1 2 3", LengthError},
+		{"V[6]←1", IndexError},
+		{"V[1;1]←1", RankError},
 	}
 	for _, c := range cases {
 		in := New(&bytes.Buffer{})
@@ -240,8 +252,8 @@ func TestIndexAssignErrors(t *testing.T) {
 		}
 		err := in.Exec(c.in)
 		e, ok := err.(*Error)
-		if !ok || e.Code != c.code {
-			t.Errorf("%s: got %v, want code %d", c.in, err, c.code)
+		if !ok || e.Class != c.class {
+			t.Errorf("%s: got %v, want %v", c.in, err, c.class)
 		}
 	}
 }
@@ -296,12 +308,12 @@ func TestFunctions(t *testing.T) {
 
 func TestQuadInput(t *testing.T) {
 	got := run(t, "X←⎕", "1 2 3", "Y←⎕", "1÷0", "2×X", "Y")
-	want := "⎕:\n⎕:\nAttempted division by zero\n1÷0\n ↑\n⎕:\n2 4 6"
+	want := "⎕:\n⎕:\nDOMAIN ERROR\n1÷0\n ^\n⎕:\n2 4 6"
 	if got != want {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}
 	err := New(&bytes.Buffer{}).Exec("⎕")
-	if e, ok := err.(*Error); !ok || e.Code != 18 {
+	if e, ok := err.(*Error); !ok || e.Class != Interrupt {
 		t.Errorf("⎕ without input: got %v", err)
 	}
 }
@@ -315,20 +327,20 @@ func TestFunctionErrors(t *testing.T) {
 		"∇R←INF X", "R←INF X", "∇",
 	}
 	cases := []struct {
-		in   string
-		code int
+		in    string
+		class Class
 	}{
-		{"∇MON Y", 5},
-		{"∇", 7},
-		{"∇R←", 6},
-		{"∇A B C D", 3},
-		{"MON←1", 8},
-		{"DY 1", 74},
-		{"1 MON 2", 10},
-		{"1+NORES", 100},
-		{"NOVAL", 100},
-		{"INF 1", 16},
-		{"→1.5", 12},
+		{"∇MON Y", DefnError},
+		{"∇", DefnError},
+		{"∇R←", DefnError},
+		{"∇A B C D", DefnError},
+		{"MON←1", SyntaxError},
+		{"DY 1", ValenceError},
+		{"1 MON 2", ValenceError},
+		{"1+NORES", ValueError},
+		{"NOVAL", ValueError},
+		{"INF 1", SystemLimit},
+		{"→1.5", DomainError},
 	}
 	for _, c := range cases {
 		in := New(&bytes.Buffer{})
@@ -339,20 +351,23 @@ func TestFunctionErrors(t *testing.T) {
 		}
 		err := in.Exec(c.in)
 		e, ok := err.(*Error)
-		if !ok || e.Code != c.code {
-			t.Errorf("%s: got %v, want code %d", c.in, err, c.code)
+		if !ok || e.Class != c.class {
+			t.Errorf("%s: got %v, want %v", c.in, err, c.class)
 		}
 	}
 	in := New(&bytes.Buffer{})
 	in.Exec("∇EMPTY")
-	if err := in.Exec("∇"); err == nil || err.(*Error).Code != 75 {
+	if err := in.Exec("∇"); err != nil {
 		t.Errorf("empty function: got %v", err)
+	}
+	if err := in.Exec("EMPTY"); err != nil {
+		t.Errorf("empty function call: got %v", err)
 	}
 }
 
 func TestErrorLocation(t *testing.T) {
 	got := run(t, "∇R←BAD X", "R←X÷0", "∇", "BAD 1")
-	want := "Attempted division by zero\nBAD[1] R←X÷0\n          ↑"
+	want := "DOMAIN ERROR\nBAD[1] R←X÷0\n          ^"
 	if got != want {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}
@@ -379,9 +394,9 @@ func TestColorOutput(t *testing.T) {
 	in.Prompt = "      "
 	in.Run(strings.NewReader("∇R←F X\nR←X÷0\n∇\nF 1\nX←⎕\n2\n"))
 	want := "      \x1b[2m[1] \x1b[0m\x1b[2m[2] \x1b[0m      " +
-		"\x1b[1;31mAttempted division by zero\x1b[0m\n" +
+		"\x1b[1;31mDOMAIN ERROR\x1b[0m\n" +
 		"\x1b[33mF[1] \x1b[0mR←X÷0\n" +
-		"        \x1b[31m↑\x1b[0m\n" +
+		"        \x1b[31m^\x1b[0m\n" +
 		"      \x1b[2m⎕:\x1b[0m\n      "
 	if out.String() != want {
 		t.Errorf("got %q\nwant %q", out.String(), want)

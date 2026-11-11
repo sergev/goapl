@@ -5,23 +5,8 @@ the README roadmap). This list grows it toward APL2, one task at a time.
 Each task ends with: unit tests, a `testdata/` script (or additions to
 one), README updates, and `make test` and `make compare` passing.
 
-Already done: `⍝` comments; `⌈ ⌊ | ⍟` monadic and dyadic; compress `A/B`.
-
-## T1. Decide on prototype compatibility
-
-Several APL2 features conflict with the original:
-
-- `○/` means log to base in the original; in APL2 `○` is pi-times and
-  the circular functions.
-- `+/5`, `+/,5`, `+/⍳0` are errors in the original; APL2 gives 5, 5
-  and the identity element 0.
-- Catenate on rank > 1, ranks above 3, `0÷0`, etc. are errors there.
-- Error reporting: numbered prototype messages vs APL2 error classes
-  (`DOMAIN ERROR`, `LENGTH ERROR`, `RANK ERROR`, `INDEX ERROR`,
-  `VALUE ERROR`, `SYNTAX ERROR`, `WS FULL`).
-
-Options: drop the quirks, or keep them behind a `-compat` flag.
-Update `parity_test.go` and `tools/compare_cases.txt` to match.
+Already done: `⍝` comments; `⌈ ⌊ | ⍟` monadic and dyadic; compress `A/B`;
+APL2 error classes and behavior where the original differs (T1).
 
 ## T2. Data model
 
@@ -54,13 +39,12 @@ and localization in function headers.
 - `!` factorial/gamma; `A!B` binomial.
 - `?` roll; `A?B` deal (uses `⎕RL` from T3, so tests are repeatable).
 - `⍲ ⍱` nand, nor.
-- `0÷0` gives 1 as in APL2 (if chosen in T1).
 
 ## T6. Operators and axis
 
 - Scan `f\`.
 - Reduce and scan along an axis: `f/[k]`, `f\[k]`, and `⌿ ⍀`.
-- Identity elements for reducing empty arrays.
+- N-wise reduction `N f/X`.
 - Compress and expand with axis: `A/[k]B`, `A\B`, `A⍀B`.
 - Inner and outer product on any rank.
 

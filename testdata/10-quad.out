@@ -27,14 +27,14 @@
       C←⎕
 ⎕:
       1÷0
-Attempted division by zero
+DOMAIN ERROR
 1÷0
- ↑
+ ^
 ⎕:
       UNDEF
-Variable not assigned a value
+VALUE ERROR
 UNDEF
-↑
+^
 ⎕:
       7
       C
@@ -58,5 +58,5 @@ UNDEF
       ⍝ End of input while reading ⎕
       ⎕
 ⎕:
-End of input
+INTERRUPT
 ⎕

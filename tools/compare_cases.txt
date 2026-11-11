@@ -31,8 +31,9 @@ X←2 ⋄ Y←X+1 ⋄ X×Y
 */2 3
 ⌈/3 9 2
 ⌊/3 9 2
-○/10 1000
-○/2 8
+# APL2: ○ is not log to base.
+!○/10 1000
+!○/2 8
 =/1 1 1
 ≠/1 2 1
 +/2 3⍴⍳6
@@ -72,8 +73,12 @@ M←2 2⍴⍳4 ⋄ M[1;2]←9 ⋄ M
 ÷0
 ~2
 1 2+1 2 3
-+/5
-+/,5
+# APL2: a scalar or one element reduces to itself.
+!+/5
+!+/,5
+!+/⍳0
+# APL2: 0÷0 is 1.
+!0÷0
 ⍳¯1
 ⍳2.5
 (2 2⍴1),1
@@ -84,11 +89,9 @@ V←⍳3 ⋄ V[1.5]
 1+2)
 # Prototype misses an unclosed "(" and prints 3.
 !(1+2
-# Prototype reports this error twice (also INVALID CHARACTER ENCOUNTERED).
-!¯A
-# Prototype says INVALID EXPRESSION; its message 100 is never used.
-!UNDEF
-!1+UNDEF
+¯A
+UNDEF
+1+UNDEF
 1.+2
 
 # User functions; the prototype runs calls only as whole statements
@@ -101,9 +104,8 @@ V←⍳3 ⋄ V[1.5]
 ∇F ⋄ ⎕←7 ⋄ ∇ ⋄ F
 ∇F N ⋄ N ⋄ ∇ ⋄ ∇G N ⋄ N+1 ⋄ ∇ ⋄ G 1 ⋄ F 1
 ∇F N ⋄ N×2 ⋄ ∇ ⋄ N←7 ⋄ F 3 ⋄ N
-# After a rejected header, the body runs as immediate lines; N is then
-# undefined (INVALID EXPRESSION vs VARIABLE NOT ASSIGNED A VALUE, as above).
-!∇F N ⋄ N ⋄ ∇ ⋄ ∇F N ⋄ N ⋄ ∇
+# After a rejected header, the body runs as immediate lines.
+∇F N ⋄ N ⋄ ∇ ⋄ ∇F N ⋄ N ⋄ ∇
 ∇F N ⋄ N ⋄ ∇ ⋄ ∇F N ⋄ 1 ⋄ ∇
 # Prototype does not display an explicit result.
 !∇R←FACT N ⋄ R←×/⍳N ⋄ ∇ ⋄ FACT 5

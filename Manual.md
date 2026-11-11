@@ -8,8 +8,9 @@ subtitle: An APL interpreter in Go
 goapl is an interpreter for APL, a language of arrays. It reproduces the
 APL interpreter written in Pascal by V. Dichristofano, A. Kaniss,
 T. Robinson and J. Santini (NADC / Villanova University), published in
-*Pascal News* #26 (1983) and *The BYTE Book of Pascal* (1979), with a few
-additions. This manual describes the language as goapl implements it.
+*Pascal News* #26 (1983) and *The BYTE Book of Pascal* (1979), and grows
+it toward APL2. Where the two differ, goapl follows APL2. This manual
+describes the language as goapl implements it.
 
 ## Running goapl
 
@@ -77,8 +78,8 @@ Numbers separated by spaces form one vector.
 ## Names
 
 A name starts with a letter, `∆` or `_` and continues with letters,
-digits, `∆` or `_`. It is at most 10 characters long. Upper and lower case
-are different.
+digits, `∆` or `_`, and may be of any length. Upper and lower case are
+different.
 
 ```apl
       RATE∆1←5
@@ -232,9 +233,9 @@ gives *Variable not assigned a value*.
 
 ```apl
       UNKNOWN+1
-Variable not assigned a value
+VALUE ERROR
 UNKNOWN+1
-↑
+^
 ```
 
 # Scalar functions
@@ -256,9 +257,9 @@ or have one element. That one is used with every element of the other.
 0 1
 2 3
       1 2+1 2 3
-Args. incompatible for dyadic operation
+LENGTH ERROR
 1 2+1 2 3
-   ↑
+   ^
 ```
 
 ## Arithmetic
@@ -296,21 +297,24 @@ Dyadic `+ - × ÷` are the four operations; `A*B` is A to the power B.
 1.414213562
 ```
 
-Division by zero is an error, and so is a power that has no real value.
+Division by zero is an error, except `0÷0`, which is 1. A power that
+has no real value is an error too.
 
 ```apl
+      0÷0
+1
       1÷0
-Attempted division by zero
+DOMAIN ERROR
 1÷0
- ↑
+ ^
       ÷0
-Attempted inverse of zero
+DOMAIN ERROR
 ÷0
-↑
+^
       ¯8*0.5
-Argument is not an integer
+DOMAIN ERROR
 ¯8*0.5
-  ↑
+  ^
 ```
 
 ## Ceiling, floor, maximum, minimum
@@ -388,9 +392,9 @@ monadic form.
       0 0 1 1∨0 1 0 1
 0 1 1 1
       ~2
-Value not boolean
+DOMAIN ERROR
 ~2
-↑
+^
 ```
 
 # Structural functions
@@ -510,26 +514,32 @@ For a matrix, reduction works along each row.
 6 15
 ```
 
-`○/` is the same as `⍟/`, as in the original: `○/2 8` is the logarithm
-of 8 to the base 2.
-
-```apl
-      ○/2 8
-3
-```
-
-The argument must have at least two elements along its last axis (a
-matrix with rows of one element is allowed).
+A scalar reduces to itself, and so does a single element.
 
 ```apl
       +/5
-Argument is a scalar or empty vector
-+/5
-↑
+5
       +/,5
-Argument is a vector of length one
-+/,5
-↑
+5
+```
+
+Reducing an empty axis gives the identity element of the function: the
+value e such that `e f X` is X. For `⌈` and `⌊` it is the smallest and
+largest number; `⍟` has none.
+
+```apl
+      +/⍳0
+0
+      ×/⍳0
+1
+      ⌊/⍳0
+1.797693135E308
+      +/2 0⍴0
+0 0
+      ⍟/⍳0
+DOMAIN ERROR
+⍟/⍳0
+^
 ```
 
 ## Inner product `A f.g B`
@@ -631,21 +641,21 @@ of the selection. Other variables holding the same value do not change.
 ```apl
       V←⍳5
       V[6]
-Index out of range
+INDEX ERROR
 V[6]
- ↑
+ ^
       V[1.5]
-Non-integer indices
+DOMAIN ERROR
 V[1.5]
- ↑
+ ^
       V[1;2]
-Non-scalar indices
+RANK ERROR
 V[1;2]
- ↑
+ ^
       V[1 2]←1 2 3
-Assigned expression not a scalar
+LENGTH ERROR
 V[1 2]←1 2 3
-↑
+^
 ```
 
 The wrong number of indices also gives *Non-scalar indices*, as in the
@@ -891,60 +901,36 @@ message shows the function and statement number where it happened.
 [1] R←X÷X-1
 [2] ∇
       RATIO 1
-Attempted division by zero
+DOMAIN ERROR
 RATIO[1] R←X÷X-1
-            ↑
+            ^
 ```
 
 # Errors
 
-An error prints a message, the line, and a caret `↑` under the place of
-the error. The statement has no effect after that point.
+An error prints the error class, the line, and a caret `^` under the
+place of the error. The statement has no effect after that point.
 
-| Code | Message | Cause |
-|:--|:--|:--|
-| 1 | Invalid character follows negative sign | `¯` not followed by a number |
-| 2 | Digit must follow a decimal point | `1.` |
-| 3 | Extraneous chars. follow function header | too many names in a header |
-| 4 | Invalid character encountered | glyph that goapl does not know |
-| 5 | Function already defined | redefining a function |
-| 6 | Illegal name to right of explicit result | `∇R←` without a name |
-| 7 | Invalid function/argument name | header without a valid name |
-| 8 | Result of assignment not valid variable | assigning to a function name |
-| 10 | Invalid expression | syntax error, unknown function |
-| 12 | Statement no. to branch to not integer | `→1.5` |
-| 13 | Dyadic operator not preceded by primary | product used monadically |
-| 15 | Mismatched parentheses | unbalanced `(` or `)` |
-| 16 | Function calls nested too deep | more than 1000 nested calls |
-| 18 | End of input | `⎕` at end of input |
-| 19 | Value not boolean | `~ ∧ ∨` on a number other than 0, 1 |
-| 20 | Attempted division by zero | `A÷0`, `0*¯1`, `1⍟B` |
-| 21 | Argument not a scalar | `⍳1 2` |
-| 22 | Argument is negative | `⍳¯1`, `¯1⍴5`, `⍟0` |
-| 23 | Argument is not an integer | `⍳2.5`, `¯8*0.5` |
-| 24 | Argument is a scalar or empty vector | `+/5`, `+/⍳0` |
-| 26 | Invalid outer product expression | `∘.` with a non-scalar function |
-| 27 | Invalid inner product expression | `f.g` with a non-scalar function |
-| 29 | Left argument is not a vector | `A⍳B`, `A/B` with a matrix A |
-| 34 | Invalid index expression | unclosed `[` |
-| 35 | Non-scalar indices | wrong number of indices |
-| 36 | Assigned expression not a scalar | wrong shape in `X[I]←Y` |
-| 37 | Non-integer indices | `V[1.5]` |
-| 38 | Index out of range | `V[0]`, `V[1+⍴V]` |
-| 50 | Number and base of different sign | `¯2⍟8` |
-| 51 | Argument is a vector of length one | `+/,5` |
-| 52 | Args. not compatible for inner product | axis lengths differ |
-| 53 | Argument(s) with rank greater than one | `,` with a matrix |
-| 54 | Attempted inverse of zero | `÷0` |
-| 55 | Args. incompatible for dyadic operation | shapes differ |
-| 56 | Left argument not a vector | `A⍴B` with a matrix A |
-| 60 | Greater than three dimensions | result of rank above 3 |
-| 70 | Identifier too long | name over 10 characters |
-| 72 | Invalid reduction operator | `f/` with a non-scalar function |
-| 73 | Dyadic reduction reference | `A f/B` |
-| 74 | Monadic reference to dyadic operator | `=5`, dyadic function with one argument |
-| 75 | Function defined with no statements | `∇F` followed by `∇` |
-| 100 | Variable not assigned a value | name without value; function without result |
+```apl
+      1 2+1 2 3
+LENGTH ERROR
+1 2+1 2 3
+   ^
+```
+
+| Class | Cause |
+|:--|:--|
+| SYNTAX ERROR | malformed number, unknown glyph, unbalanced parentheses or brackets, misplaced function, assignment to a function name |
+| VALUE ERROR | name without a value; function without a result used as a value |
+| VALENCE ERROR | `=5`; a function given the wrong number of arguments |
+| DOMAIN ERROR | `1÷0`, `~2`, `⍳¯1`, `¯8*0.5`, `V[1.5]`, `→1.5`, `⍟/⍳0` |
+| LENGTH ERROR | shapes of the same rank differ; `X[I]←Y` with the wrong shape |
+| RANK ERROR | ranks differ; a matrix where a vector is needed; wrong number of indices |
+| INDEX ERROR | `V[0]`, `V[1+⍴V]` |
+| DEFN ERROR | bad function header; redefining a function |
+| NONCE ERROR | a glyph that goapl knows but does not implement yet |
+| SYSTEM LIMIT | rank above 3; more than 1000 nested calls |
+| INTERRUPT | `⎕` at end of input |
 
 # Differences from the original
 
@@ -958,6 +944,17 @@ goapl adds to the language of the Pascal original:
 - `⍝` comments.
 - Comparison tolerance.
 
+goapl follows APL2 where the original differs:
+
+- Errors are reported by APL2 class (`DOMAIN ERROR`) instead of the
+  original's numbered messages.
+- Reduction of a scalar, of one element, and of an empty axis gives a
+  value instead of an error.
+- `0÷0` is 1.
+- `○/` is not the logarithm; use `⍟/`.
+- Names may be longer than 10 characters.
+- A function may have no statements.
+
 goapl does not reproduce these defects of the original:
 
 - A function result could not be used in an expression or displayed.
@@ -967,8 +964,7 @@ goapl does not reproduce these defects of the original:
 - `1;2`, `1]2` and `1∩2` gave a value.
 
 Output uses the usual APL format instead of fixed columns of `12.2`
-numbers, and an undefined name gives *Variable not assigned a value*
-instead of *Invalid expression*.
+numbers.
 
 # Quick reference
 

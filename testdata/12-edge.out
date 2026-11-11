@@ -1,112 +1,110 @@
       ⍝ Errors in any part of an expression stop it
       A←1÷0
-Attempted division by zero
+DOMAIN ERROR
 A←1÷0
-   ↑
+   ^
       A
-Variable not assigned a value
+VALUE ERROR
 A
-↑
+^
       (1÷0)+1
-Attempted division by zero
+DOMAIN ERROR
 (1÷0)+1
-  ↑
+  ^
       1+1÷0
-Attempted division by zero
+DOMAIN ERROR
 1+1÷0
-   ↑
+   ^
       -1÷0
-Attempted division by zero
+DOMAIN ERROR
 -1÷0
-  ↑
+  ^
       (1÷0)[1]
-Attempted division by zero
+DOMAIN ERROR
 (1÷0)[1]
-  ↑
+  ^
       V←⍳5
       V[1÷0]
-Attempted division by zero
+DOMAIN ERROR
 V[1÷0]
-   ↑
+   ^
       V[1]←1÷0
-Attempted division by zero
+DOMAIN ERROR
 V[1]←1÷0
-      ↑
+      ^
       V[1÷0]←1
-Attempted division by zero
+DOMAIN ERROR
 V[1÷0]←1
-   ↑
+   ^
       V
 1 2 3 4 5
       ⎕←1÷0
-Attempted division by zero
+DOMAIN ERROR
 ⎕←1÷0
-   ↑
+   ^
       →1÷0
-Attempted division by zero
+DOMAIN ERROR
 →1÷0
-  ↑
+  ^
       ⍝ Errors inside products
       1 2+.÷0 1
-Attempted division by zero
+DOMAIN ERROR
 1 2+.÷0 1
-   ↑
+   ^
       1 1÷.×0 0
-Attempted division by zero
-1 1÷.×0 0
-   ↑
+1
       (2 2 2⍴1)+.×2 2 2⍴1
-Greater than three dimensions
+SYSTEM LIMIT
 (2 2 2⍴1)+.×2 2 2⍴1
-         ↑
+         ^
       ⍝ Selection with too many axes
       M←2 2⍴⍳4
       M[2 2⍴1;2 2⍴1]
-Greater than three dimensions
+SYSTEM LIMIT
 M[2 2⍴1;2 2⍴1]
- ↑
+ ^
       ⍝ Parse errors in nested parts
       (1 2 (3))
-Invalid expression
+SYNTAX ERROR
 (1 2 (3))
-     ↑
+     ^
       -)
-Invalid expression
+SYNTAX ERROR
 -)
- ↑
+ ^
       V[(]←1
-Invalid expression
+SYNTAX ERROR
 V[(]←1
-   ↑
+   ^
       V[1]←)
-Invalid expression
+SYNTAX ERROR
 V[1]←)
-     ↑
+     ^
       V[1 2)]
-Invalid index expression
+SYNTAX ERROR
 V[1 2)]
-     ↑
+     ^
       ⎕←)
-Invalid expression
+SYNTAX ERROR
 ⎕←)
-  ↑
+  ^
       →(
-Invalid expression
+SYNTAX ERROR
 →(
-  ↑
+  ^
       ⍝ Functions that are not available
       ?5
-Invalid expression
+NONCE ERROR
 ?5
-↑
+^
       ↑5
-Invalid expression
+NONCE ERROR
 ↑5
-↑
+^
       1?2
-Invalid expression
+NONCE ERROR
 1?2
- ↑
+ ^
       ⍝ Infinity
       *1000
 ∞
@@ -114,9 +112,9 @@ Invalid expression
 ¯∞
       ⍝ Numbers too large to read
       1E999
-Invalid expression
+DOMAIN ERROR
 1E999
-     ↑
+     ^
       ⍝ Names repeated in a header are localized once
       ∇R←SAME X;X
 [1] R←X
@@ -129,9 +127,9 @@ Invalid expression
       ⍝ A lexical error while defining drops the line; definition goes on
       ∇R←LEX X
 [1] R←1 # 2
-Invalid character encountered
+SYNTAX ERROR
 R←1 # 2
-    ↑
+    ^
 [1] R←X+1
 [2] ∇
       LEX 1
@@ -141,6 +139,6 @@ R←1 # 2
 [1] R←1 2 (3)
 [2] ∇
       SYN 1
-Invalid expression
+SYNTAX ERROR
 SYN[1] R←1 2 (3)
-             ↑
+             ^

@@ -7,7 +7,7 @@ package apl
 func (in *Interp) eval(n node) (*Array, error) {
 	v, err := in.evalNode(n)
 	if err == nil && v == nil {
-		err = errorAt(100, n.pos())
+		err = errorAt(ValueError, n.pos())
 	}
 	return v, err
 }
@@ -31,7 +31,7 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 	case *varNode:
 		v, ok := in.vars[n.name]
 		if !ok {
-			return nil, errorAt(100, n.at)
+			return nil, errorAt(ValueError, n.at)
 		}
 		return v, nil
 	case *assignNode:
@@ -63,7 +63,7 @@ func (in *Interp) evalNode(n node) (*Array, error) {
 		}
 		x, ok := in.vars[n.name]
 		if !ok {
-			return nil, errorAt(100, n.at)
+			return nil, errorAt(ValueError, n.at)
 		}
 		r, err := indexAssign(x, idx, v)
 		if err != nil {
@@ -117,7 +117,7 @@ func (in *Interp) run(n node) (int, error) {
 		}
 		t, ok := toInt(v.Data[0])
 		if !ok {
-			return -1, errorAt(12, b.at)
+			return -1, errorAt(DomainError, b.at)
 		}
 		return max(t, 0), nil
 	}
@@ -159,36 +159,45 @@ func setPos(err error, pos int) error {
 func monad(f *fnNode, x *Array) (*Array, error) {
 	switch f.kind {
 	case fnReduce:
-		return reduce(scalarFns[f.glyph].dyad, x)
+		return reduce(f.glyph, x)
 	case fnInner, fnOuter:
-		return nil, newError(13)
+		return nil, newError(SyntaxError)
 	}
 	if sf := scalarFns[f.glyph]; sf != nil {
 		if sf.monad == nil {
-			return nil, newError(74)
+			return nil, newError(ValenceError)
 		}
 		return applyMonad(sf.monad, x)
 	}
-	if sf := structFns[f.glyph]; sf != nil && sf.monad != nil {
+	if sf := structFns[f.glyph]; sf != nil {
+		if sf.monad == nil {
+			return nil, newError(ValenceError)
+		}
 		return sf.monad(x)
 	}
-	return nil, newError(10)
+	return nil, newError(NonceError)
 }
 
 func dyad(f *fnNode, a, b *Array) (*Array, error) {
 	switch f.kind {
 	case fnReduce:
-		return nil, newError(73)
+		return nil, newError(SyntaxError)
 	case fnInner:
-		return inner(scalarFns[f.glyph].dyad, scalarFns[f.g].dyad, a, b)
+		return inner(f.glyph, f.g, a, b)
 	case fnOuter:
 		return outer(scalarFns[f.glyph].dyad, a, b)
 	}
-	if sf := scalarFns[f.glyph]; sf != nil && sf.dyad != nil {
+	if sf := scalarFns[f.glyph]; sf != nil {
+		if sf.dyad == nil {
+			return nil, newError(ValenceError)
+		}
 		return applyDyad(sf.dyad, a, b)
 	}
-	if sf := structFns[f.glyph]; sf != nil && sf.dyad != nil {
+	if sf := structFns[f.glyph]; sf != nil {
+		if sf.dyad == nil {
+			return nil, newError(ValenceError)
+		}
 		return sf.dyad(a, b)
 	}
-	return nil, newError(10)
+	return nil, newError(NonceError)
 }

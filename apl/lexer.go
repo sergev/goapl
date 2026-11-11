@@ -46,9 +46,6 @@ const (
 	specialGlyphs = "←→∇⎕()[];:.∘"
 )
 
-// MaxNameLength is the identifier length limit of the prototype.
-const MaxNameLength = 10
-
 // Lex splits a line into tokens.
 func Lex(line string) ([]Token, error) {
 	src := []rune(line)
@@ -88,9 +85,6 @@ func Lex(line string) ([]Token, error) {
 			for i < len(src) && (isLetter(src[i]) || isDigit(src[i])) {
 				i++
 			}
-			if i-start > MaxNameLength {
-				return nil, errorAt(70, start)
-			}
 			toks = append(toks, Token{Kind: Name, Pos: start, Text: string(src[start:i])})
 		case strings.ContainsRune(primGlyphs, c):
 			toks = append(toks, Token{Kind: Prim, Pos: i, Text: string(c)})
@@ -99,7 +93,7 @@ func Lex(line string) ([]Token, error) {
 			toks = append(toks, Token{Kind: Special, Pos: i, Text: string(c)})
 			i++
 		default:
-			return nil, errorAt(4, i)
+			return nil, errorAt(SyntaxError, i)
 		}
 	}
 	return toks, nil
@@ -112,7 +106,7 @@ func lexNumber(src []rune, i int) (float64, int, error) {
 		b.WriteByte('-')
 		i++
 		if i >= len(src) || !(isDigit(src[i]) || src[i] == '.') {
-			return 0, i, errorAt(1, i)
+			return 0, i, errorAt(SyntaxError, i)
 		}
 	}
 	for i < len(src) && isDigit(src[i]) {
@@ -123,7 +117,7 @@ func lexNumber(src []rune, i int) (float64, int, error) {
 		b.WriteByte('.')
 		i++
 		if i >= len(src) || !isDigit(src[i]) {
-			return 0, i, errorAt(2, i)
+			return 0, i, errorAt(SyntaxError, i)
 		}
 		for i < len(src) && isDigit(src[i]) {
 			b.WriteRune(src[i])
@@ -145,7 +139,7 @@ func lexNumber(src []rune, i int) (float64, int, error) {
 	}
 	v, err := strconv.ParseFloat(b.String(), 64)
 	if err != nil {
-		return 0, i, errorAt(10, i)
+		return 0, i, errorAt(DomainError, i)
 	}
 	return v, i, nil
 }

@@ -13,7 +13,7 @@
 1 2 3
 ¯1 0 1
 1   2    3
-⍝ Names: letters, digits, ∆ and _; up to 10 characters
+⍝ Names: letters, digits, ∆ and _; any length
 A←1
 ABC←2
 A1B2←3
@@ -22,6 +22,8 @@ X_Y←5
 A+ABC+A1B2+∆X+X_Y
 ABCDEFGHIJ←6
 ABCDEFGHIJ
+LongVariableName←8
+LongVariableName
 abc←7
 abc
 ⍝ Comments
@@ -35,5 +37,4 @@ abc
 1.+2
 1 # 2
 'A'
-ABCDEFGHIJK←1
 1E

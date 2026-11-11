@@ -31,64 +31,64 @@
       →5
       ⍝ Errors
       (1+2
-Mismatched parentheses
+SYNTAX ERROR
 (1+2
-↑
+^
       1+2)
-Mismatched parentheses
+SYNTAX ERROR
 1+2)
-   ↑
+   ^
       )
-Invalid expression
+SYNTAX ERROR
 )
-↑
+^
       (
-Invalid expression
+SYNTAX ERROR
 (
- ↑
+ ^
       ()
-Invalid expression
+SYNTAX ERROR
 ()
- ↑
+ ^
       1 2 (3)
-Invalid expression
+SYNTAX ERROR
 1 2 (3)
-    ↑
+    ^
       2+
-Invalid expression
+SYNTAX ERROR
 2+
-  ↑
+  ^
       +
-Invalid expression
+SYNTAX ERROR
 +
- ↑
+ ^
       ←1
-Invalid expression
+SYNTAX ERROR
 ←1
-↑
+^
       1←2
-Invalid expression
+SYNTAX ERROR
 1←2
- ↑
+ ^
       A B
-Invalid expression
+SYNTAX ERROR
 A B
-  ↑
+  ^
       UNDEF
-Variable not assigned a value
+VALUE ERROR
 UNDEF
-↑
+^
       1+UNDEF
-Variable not assigned a value
+VALUE ERROR
 1+UNDEF
-  ↑
+  ^
       →
-Invalid expression
+SYNTAX ERROR
 →
- ↑
+ ^
       →1.5
-Statement no. to branch to not integer
+DOMAIN ERROR
 →1.5
-↑
+^
       ⍝ /* ends the session
       /*

@@ -50,15 +50,15 @@ Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
   and restoring globals for args, result, `;locals` and labels; labels are
   local constants equal to their line number; `→` returns a target from
   `run`, out-of-range ends the call.
-- **Errors**: `*Error{Code, Pos, Src, Where}` (`errors.go`). Codes index the
-  original program's 100-entry message table (`Messages`, sentence case;
-  16 and 18 are goapl additions). Errors propagate as Go errors to the top;
-  `setPos`/`withSrc`/`locate` fill in position, source line and `F[n]`,
-  and `Interp.report` prints message, line and caret.
+- **Errors**: `*Error{Class, Pos, Src, Where}` (`errors.go`); `Class` is an
+  APL2 error class (`DomainError` prints `DOMAIN ERROR`). Errors propagate
+  as Go errors to the top; `setPos`/`withSrc`/`locate` fill in position,
+  source line and `F[n]`, and `Interp.report` prints class, line and caret
+  `^`.
 
 ## Tests
 
-- `apl/*_test.go`: unit tests, mostly checking error codes.
+- `apl/*_test.go`: unit tests, mostly checking error classes.
 - `testdata/NN-*.apl` + `.out`: golden session transcripts per feature
   area, run with `Prompt` and `Echo` set (`golden_test.go`). `⍝` comments
   label each group.
@@ -72,8 +72,8 @@ Pipeline per line, driven by `Interp.Exec` (`workspace.go`):
 
 ## Conventions
 
-- Match the original's behavior and error codes unless it is a bug; record
-  each deviation in `parity_test.go`, `tools/compare_cases.txt` and the
+- Where the original and APL2 differ, follow APL2; record each deviation
+  from the original in `parity_test.go`, `tools/compare_cases.txt` and the
   "Differences from the original" section of `Manual.md`.
 - When the language changes, update `Manual.md` (examples are tested), the
   README language table, and add cases to the matching `testdata` script.

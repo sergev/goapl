@@ -89,9 +89,9 @@
       OUTER 4
 41
       V
-Variable not assigned a value
+VALUE ERROR
 V
-↑
+^
       ⍝ Branch to a statement number
       ∇R←JUMP N
 [1] R←1
@@ -172,56 +172,55 @@ V
 2
       ⍝ Header errors; after a rejected header, lines run as usual
       ∇HELLO
-Function already defined
+DEFN ERROR
 ∇HELLO
- ↑
+ ^
       ∇
-Invalid function/argument name
+DEFN ERROR
 ∇
- ↑
+ ^
       ∇R←
-Illegal name to right of explicit result
+DEFN ERROR
 ∇R←
-   ↑
+   ^
       ∇R←A B C D
-Extraneous chars. follow function header
+DEFN ERROR
 ∇R←A B C D
-         ↑
+         ^
       ∇A B C D
-Extraneous chars. follow function header
+DEFN ERROR
 ∇A B C D
-       ↑
+       ^
       ∇1 F
-Invalid function/argument name
+DEFN ERROR
 ∇1 F
- ↑
+ ^
       ∇R←F X;
-Invalid function/argument name
+DEFN ERROR
 ∇R←F X;
-       ↑
-      ⍝ A function needs statements
+       ^
+      ⍝ A function may have no statements
       ∇EMPTY
 [1] ∇
-Function defined with no statements
-∇
+      EMPTY
       ⍝ A function name cannot be assigned
       SQ←1
-Result of assignment not valid variable
+SYNTAX ERROR
 SQ←1
-↑
+^
       ⍝ Wrong number of arguments
       HYP 1
-Monadic reference to dyadic operator
+VALENCE ERROR
 HYP 1
-↑
+^
       1 SQ 2
-Invalid expression
+VALENCE ERROR
 1 SQ 2
-  ↑
+  ^
       (SQ)
-Invalid expression
+SYNTAX ERROR
 (SQ)
-   ↑
+   ^
       ⍝ A function without result has no value
       ∇NORES
 [1] 1
@@ -230,33 +229,33 @@ Invalid expression
 1
       1+NORES
 1
-Variable not assigned a value
+VALUE ERROR
 1+NORES
-  ↑
+  ^
       ⍝ The result must be assigned
       ∇R←NOVAL
 [1] 1
 [2] ∇
       NOVAL
 1
-Variable not assigned a value
+VALUE ERROR
 NOVAL
-↑
+^
       ⍝ An error inside a function shows where it happened
       ∇R←BAD X
 [1] R←X÷0
 [2] ∇
       BAD 1
-Attempted division by zero
+DOMAIN ERROR
 BAD[1] R←X÷0
-          ↑
+          ^
       ∇R←CALLBAD X
 [1] R←1+BAD X
 [2] ∇
       CALLBAD 1
-Attempted division by zero
+DOMAIN ERROR
 BAD[1] R←X÷0
-          ↑
+          ^
       ⍝ Locals are restored after an error
       X
 100
@@ -265,14 +264,14 @@ BAD[1] R←X÷0
 [1] →1.5
 [2] ∇
       BADJUMP
-Statement no. to branch to not integer
+DOMAIN ERROR
 BADJUMP[1] →1.5
-           ↑
+           ^
       ⍝ Unbounded recursion
       ∇R←INF X
 [1] R←INF X
 [2] ∇
       INF 1
-Function calls nested too deep
+SYSTEM LIMIT
 INF[1] R←INF X
-         ↑
+         ^

@@ -14,7 +14,7 @@ const manualPath = "../Manual.md"
 // A line of spaces and a caret is error output.
 var (
 	defPrompt = regexp.MustCompile(`^\[\d+\] `)
-	caretLine = regexp.MustCompile(`^ *↑$`)
+	caretLine = regexp.MustCompile(`^ *\^$`)
 )
 
 func transcriptInput(block string) string {

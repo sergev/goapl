@@ -111,7 +111,7 @@ func (in *Interp) quadInput() (*Array, error) {
 	for {
 		fmt.Fprintln(in.out, in.paint(stylePrompt, "⎕:"))
 		if in.input == nil || !in.input.Scan() {
-			return nil, newError(18)
+			return nil, newError(Interrupt)
 		}
 		line := in.input.Text()
 		if in.Echo {
@@ -150,6 +150,6 @@ func (in *Interp) report(err error) {
 	}
 	fmt.Fprintln(in.out, in.paint(styleWhere, prefix)+e.Src)
 	if e.Pos != NoPos {
-		fmt.Fprintln(in.out, strings.Repeat(" ", len([]rune(prefix))+e.Pos)+in.paint(styleCaret, "↑"))
+		fmt.Fprintln(in.out, strings.Repeat(" ", len([]rune(prefix))+e.Pos)+in.paint(styleCaret, "^"))
 	}
 }

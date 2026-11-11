@@ -41,25 +41,25 @@ func (in *Interp) defineHeader(line string, toks []Token) error {
 	f := &Function{}
 	var names []string
 	i := 0
-	name := func(code int) (string, error) {
+	name := func() (string, error) {
 		if i >= len(toks) || toks[i].Kind != Name {
 			pos := len([]rune(line))
 			if i < len(toks) {
 				pos = toks[i].Pos
 			}
-			return "", errorAt(code, pos)
+			return "", errorAt(DefnError, pos)
 		}
 		i++
 		return toks[i-1].Text, nil
 	}
-	n, err := name(7)
+	n, err := name()
 	if err != nil {
 		return err
 	}
 	if i < len(toks) && isSpecial(toks[i], "←") {
 		i++
 		f.Result = n
-		if n, err = name(6); err != nil {
+		if n, err = name(); err != nil {
 			return err
 		}
 	}
@@ -70,14 +70,14 @@ func (in *Interp) defineHeader(line string, toks []Token) error {
 	}
 	for i < len(toks) && isSpecial(toks[i], ";") {
 		i++
-		l, err := name(7)
+		l, err := name()
 		if err != nil {
 			return err
 		}
 		f.Locals = append(f.Locals, l)
 	}
 	if i < len(toks) {
-		return errorAt(3, toks[i].Pos)
+		return errorAt(DefnError, toks[i].Pos)
 	}
 	switch len(names) {
 	case 1:
@@ -88,7 +88,7 @@ func (in *Interp) defineHeader(line string, toks []Token) error {
 		f.Left, f.Name, f.Right = names[0], names[1], names[2]
 	}
 	if _, ok := in.fns[f.Name]; ok {
-		return errorAt(5, toks[0].Pos)
+		return errorAt(DefnError, toks[0].Pos)
 	}
 	in.defining = f
 	return nil
@@ -120,9 +120,6 @@ func (in *Interp) defineLine(line string) error {
 	}
 	if closing {
 		in.defining = nil
-		if len(f.Stmts) == 0 {
-			return newError(75)
-		}
 		in.fns[f.Name] = f
 		in.fnGen++
 	}
@@ -132,7 +129,7 @@ func (in *Interp) defineLine(line string) error {
 // call runs a user function with dynamic scoping of its local names.
 func (in *Interp) call(f *Function, left, right *Array) (*Array, error) {
 	if in.depth >= MaxDepth {
-		return nil, newError(16)
+		return nil, newError(SystemLimit)
 	}
 	in.depth++
 	defer func() { in.depth-- }()
@@ -197,7 +194,7 @@ func (in *Interp) call(f *Function, left, right *Array) (*Array, error) {
 	}
 	r, ok := in.vars[f.Result]
 	if !ok {
-		return nil, newError(100)
+		return nil, newError(ValueError)
 	}
 	return r, nil
 }

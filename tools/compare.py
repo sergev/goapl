@@ -5,8 +5,9 @@ Usage: compare.py PROTO_DIR GOAPL CASES
 
 PROTO_DIR holds pnscanner.pas and APLfile.txt; the prototype is built
 with fpc into build/proto. Each case line holds statements separated
-by " ⋄ ". A line starting with "!" is a known difference: it is run
-and shown, but does not count as a failure.
+by " ⋄ ". goapl reports APL2 error classes, so for errors only their
+presence is compared. A line starting with "!" is a known difference: it
+is run and shown, but does not count as a failure.
 """
 import os
 import re
@@ -57,19 +58,20 @@ def run_proto(lines, dir, bytemap, messages):
     return [float(x) for x in re.findall(r"-?\d+\.\d+", text)], found(out, messages), out
 
 
-def run_goapl(lines, exe, messages):
+def run_goapl(lines, exe):
     p = subprocess.run([exe], input=("\n".join(lines) + "\n").encode(),
                        capture_output=True, timeout=5)
     out = p.stdout.decode()
+    errs = re.findall(r"(?m)^[A-Z]+ (?:ERROR|LIMIT)$|^INTERRUPT$", out)
     nums = re.findall(r"¯?\d+(?:\.\d+)?(?:E¯?\d+)?", out)
-    return [float(x.replace("¯", "-").replace("E", "e")) for x in nums], found(out, messages), out
+    return [float(x.replace("¯", "-").replace("E", "e")) for x in nums], errs, out
 
 
 def agree(p, g):
     pn, pm, _ = p
     gn, gm, _ = g
     if pm or gm:
-        return pm == gm
+        return bool(pm) == bool(gm)
     return len(pn) == len(gn) and all(abs(a - b) <= 0.006 + 1e-9 * abs(a) for a, b in zip(pn, gn))
 
 
@@ -86,7 +88,7 @@ def main():
         lines = raw.lstrip("!").split(" ⋄ ")
         total += 1
         p = run_proto(lines, dir, bytemap, messages)
-        g = run_goapl(lines, exe, messages)
+        g = run_goapl(lines, exe)
         ok = agree(p, g)
         if ok and not expect_diff:
             continue

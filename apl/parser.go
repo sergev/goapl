@@ -128,9 +128,9 @@ func (in *Interp) parse(toks []Token, end int) (node, error) {
 	}
 	if t, ok := p.peek(); ok {
 		if t.Kind == Special && t.Text == ")" {
-			return nil, errorAt(15, t.Pos)
+			return nil, errorAt(SyntaxError, t.Pos)
 		}
-		return nil, errorAt(10, t.Pos)
+		return nil, errorAt(SyntaxError, t.Pos)
 	}
 	return n, nil
 }
@@ -193,12 +193,12 @@ func isScalarDyad(g string) bool {
 
 func (p *parser) expr() (node, error) {
 	if p.atExprEnd() {
-		return nil, errorAt(10, p.here())
+		return nil, errorAt(SyntaxError, p.here())
 	}
 	t, _ := p.peek()
 	if next, ok := p.peekAt(1); ok && t.Kind == Name && isSpecial(next, "←") {
 		if p.userFn(t) != nil {
-			return nil, errorAt(8, t.Pos)
+			return nil, errorAt(SyntaxError, t.Pos)
 		}
 		p.i += 2
 		r, err := p.expr()
@@ -213,10 +213,10 @@ func (p *parser) expr() (node, error) {
 			return nil, err
 		}
 		if f.kind == fnPrim && f.glyph == "/" {
-			return nil, errorAt(72, f.at)
+			return nil, errorAt(SyntaxError, f.at)
 		}
 		if f.kind == fnUser && f.user.Arity() == 2 {
-			return nil, errorAt(74, f.at)
+			return nil, errorAt(ValenceError, f.at)
 		}
 		r, err := p.expr()
 		if err != nil {
@@ -253,14 +253,14 @@ func (p *parser) expr() (node, error) {
 		return left, nil
 	}
 	if !p.atFn() {
-		return nil, errorAt(10, p.here())
+		return nil, errorAt(SyntaxError, p.here())
 	}
 	f, err := p.fn()
 	if err != nil {
 		return nil, err
 	}
 	if f.kind == fnUser && f.user.Arity() != 2 {
-		return nil, errorAt(10, f.at)
+		return nil, errorAt(ValenceError, f.at)
 	}
 	r, err := p.expr()
 	if err != nil {
@@ -299,7 +299,7 @@ func (p *parser) fn() (*fnNode, error) {
 		p.i++ // .
 		f, ok := p.peek()
 		if !ok || f.Kind != Prim || !isScalarDyad(f.Text) {
-			return nil, errorAt(26, t.Pos)
+			return nil, errorAt(SyntaxError, t.Pos)
 		}
 		p.i++
 		return &fnNode{kind: fnOuter, glyph: f.Text, at: t.Pos}, nil
@@ -307,21 +307,17 @@ func (p *parser) fn() (*fnNode, error) {
 	if dot, ok := p.peek(); ok && isSpecial(dot, ".") {
 		g, ok := p.peekAt(1)
 		if !ok || g.Kind != Prim || !isScalarDyad(t.Text) || !isScalarDyad(g.Text) {
-			return nil, errorAt(27, t.Pos)
+			return nil, errorAt(SyntaxError, t.Pos)
 		}
 		p.i += 2
 		return &fnNode{kind: fnInner, glyph: t.Text, g: g.Text, at: t.Pos}, nil
 	}
 	if next, ok := p.peek(); ok && next.Kind == Prim && next.Text == "/" {
 		p.i++
-		g := t.Text
-		if g == "○" {
-			g = "⍟" // prototype quirk: ○/ is log to base
+		if !isScalarDyad(t.Text) {
+			return nil, errorAt(SyntaxError, t.Pos)
 		}
-		if !isScalarDyad(g) {
-			return nil, errorAt(72, t.Pos)
-		}
-		return &fnNode{kind: fnReduce, glyph: g, at: t.Pos}, nil
+		return &fnNode{kind: fnReduce, glyph: t.Text, at: t.Pos}, nil
 	}
 	return &fnNode{kind: fnPrim, glyph: t.Text, at: t.Pos}, nil
 }
@@ -351,7 +347,7 @@ func (p *parser) index() ([]node, error) {
 	for {
 		t, ok := p.peek()
 		if !ok {
-			return nil, errorAt(34, p.end)
+			return nil, errorAt(SyntaxError, p.end)
 		}
 		var item node
 		if !isSpecial(t, ";") && !isSpecial(t, "]") {
@@ -360,7 +356,7 @@ func (p *parser) index() ([]node, error) {
 				return nil, err
 			}
 			if t, ok = p.peek(); !ok {
-				return nil, errorAt(34, p.end)
+				return nil, errorAt(SyntaxError, p.end)
 			}
 		}
 		idx = append(idx, item)
@@ -369,7 +365,7 @@ func (p *parser) index() ([]node, error) {
 		case isSpecial(t, "]"):
 			return idx, nil
 		case !isSpecial(t, ";"):
-			return nil, errorAt(34, t.Pos)
+			return nil, errorAt(SyntaxError, t.Pos)
 		}
 	}
 }
@@ -400,10 +396,10 @@ func (p *parser) primary() (node, error) {
 			return nil, err
 		}
 		if c, ok := p.peek(); !ok || !isSpecial(c, ")") {
-			return nil, errorAt(15, t.Pos)
+			return nil, errorAt(SyntaxError, t.Pos)
 		}
 		p.i++
 		return n, nil
 	}
-	return nil, errorAt(10, t.Pos)
+	return nil, errorAt(SyntaxError, t.Pos)
 }

@@ -30,13 +30,16 @@ var scalarFns = map[string]*scalarFn{
 	"÷": {
 		monad: func(x float64) (float64, error) {
 			if x == 0 {
-				return 0, newError(54)
+				return 0, newError(DomainError)
 			}
 			return 1 / x, nil
 		},
 		dyad: func(a, b float64) (float64, error) {
 			if b == 0 {
-				return 0, newError(20)
+				if a == 0 {
+					return 1, nil
+				}
+				return 0, newError(DomainError)
 			}
 			return a / b, nil
 		},
@@ -48,7 +51,7 @@ var scalarFns = map[string]*scalarFn{
 	"~": {
 		monad: func(x float64) (float64, error) {
 			if !isBool(x) {
-				return 0, newError(19)
+				return 0, newError(DomainError)
 			}
 			return 1 - x, nil
 		},
@@ -68,7 +71,7 @@ var scalarFns = map[string]*scalarFn{
 	"⍟": {
 		monad: func(x float64) (float64, error) {
 			if x <= 0 {
-				return 0, newError(22)
+				return 0, newError(DomainError)
 			}
 			return math.Log(x), nil
 		},
@@ -84,6 +87,13 @@ var scalarFns = map[string]*scalarFn{
 	"∨": {dyad: logical(func(a, b bool) bool { return a || b })},
 }
 
+// identity holds identity elements for reducing an empty axis.
+var identity = map[string]float64{
+	"+": 0, "-": 0, "×": 1, "÷": 1, "*": 1, "|": 0,
+	"⌈": -math.MaxFloat64, "⌊": math.MaxFloat64,
+	"=": 1, "≠": 0, "<": 0, "≤": 1, "≥": 1, ">": 0, "∧": 1, "∨": 0,
+}
+
 func signum(x float64) (float64, error) {
 	switch {
 	case x > 0:
@@ -97,10 +107,10 @@ func signum(x float64) (float64, error) {
 func power(a, b float64) (float64, error) {
 	r := math.Pow(a, b)
 	if math.IsNaN(r) {
-		return 0, newError(23)
+		return 0, newError(DomainError)
 	}
 	if math.IsInf(r, 0) && a == 0 {
-		return 0, newError(20)
+		return 0, newError(DomainError)
 	}
 	return r, nil
 }
@@ -117,14 +127,14 @@ func residue(a, b float64) (float64, error) {
 	return r, nil
 }
 
-// logBase is A⍟B: log of B to base A (the prototype's ○ reduction).
+// logBase is A⍟B: log of B to base A.
 func logBase(a, b float64) (float64, error) {
 	if a*b < 0 {
-		return 0, newError(50)
+		return 0, newError(DomainError)
 	}
 	la := math.Log(math.Abs(a))
 	if la == 0 {
-		return 0, newError(20)
+		return 0, newError(DomainError)
 	}
 	return math.Log(math.Abs(b)) / la, nil
 }
@@ -136,7 +146,7 @@ func compare(f func(a, b float64) bool) dyadFn {
 func logical(f func(a, b bool) bool) dyadFn {
 	return func(a, b float64) (float64, error) {
 		if !isBool(a) || !isBool(b) {
-			return 0, newError(19)
+			return 0, newError(DomainError)
 		}
 		return boolVal(f(a == 1, b == 1)), nil
 	}
@@ -181,8 +191,10 @@ func applyDyad(f dyadFn, a, b *Array) (*Array, error) {
 		shape = b.Shape
 	case b.IsScalar() || b.Size() == 1:
 		shape = a.Shape
+	case a.Rank() != b.Rank():
+		return nil, newError(RankError)
 	default:
-		return nil, newError(55)
+		return nil, newError(LengthError)
 	}
 	n := shapeSize(shape)
 	r := &Array{Shape: shape, Data: make([]float64, n)}

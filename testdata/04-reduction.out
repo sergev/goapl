@@ -33,11 +33,6 @@
 1
       ⍟/2 8
 3
-      ⍝ ○/ is log to base, as in the original
-      ○/2 8
-3
-      ○/10 1000
-3
       ⍝ Reduction runs along the last axis
       +/2 3⍴⍳6
 6 15
@@ -51,41 +46,61 @@
 110
       +/+/2 3⍴⍳6
 21
-      ⍝ Errors
+      ⍝ A scalar or one item reduces to itself
       +/5
-Argument is a scalar or empty vector
-+/5
-↑
+5
       +/,5
-Argument is a vector of length one
-+/,5
-↑
+5
+      ⍴+/,5
+
+      ⍝ An empty axis gives the identity element
       +/⍳0
-Argument is a scalar or empty vector
-+/⍳0
-↑
+0
+      ×/⍳0
+1
+      ∧/⍳0
+1
+      ∨/⍳0
+0
+      ⌈/⍳0
+¯1.797693135E308
+      ⌊/⍳0
+1.797693135E308
+      +/2 0⍴0
+0 0
+      ⍴+/2 0⍴0
+2
+      ⍝ Errors
+      ⍟/⍳0
+DOMAIN ERROR
+⍟/⍳0
+^
       ÷/1 0
-Attempted division by zero
+DOMAIN ERROR
 ÷/1 0
-↑
+^
       2+/1 2 3
-Dyadic reduction reference
+SYNTAX ERROR
 2+/1 2 3
- ↑
+ ^
       ⍝ Only dyadic scalar functions can be reduced
       ~/1 0
-Invalid reduction operator
+SYNTAX ERROR
 ~/1 0
-↑
+^
       ⍳/1 2
-Invalid reduction operator
+SYNTAX ERROR
 ⍳/1 2
-↑
+^
       ,/1 2
-Invalid reduction operator
+SYNTAX ERROR
 ,/1 2
-↑
+^
+      ○/2 8
+SYNTAX ERROR
+○/2 8
+^
       /1 2
-Invalid reduction operator
+SYNTAX ERROR
 /1 2
-↑
+^

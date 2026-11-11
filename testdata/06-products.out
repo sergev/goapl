@@ -52,54 +52,55 @@
 2 2 3
       ⍴(⍳0)∘.+⍳3
 0 3
+      ⍝ An empty inner axis gives the identity of f
+      (⍳0)+.×⍳0
+0
+      (⍳0)×.+⍳0
+1
       ⍝ Errors
       1 2+.×1 2 3
-Args. not compatible for inner product
+LENGTH ERROR
 1 2+.×1 2 3
-   ↑
+   ^
       (2 3⍴1)+.×2 3⍴1
-Args. not compatible for inner product
+LENGTH ERROR
 (2 3⍴1)+.×2 3⍴1
-       ↑
-      (⍳0)+.×⍳0
-Argument is a scalar or empty vector
-(⍳0)+.×⍳0
-    ↑
+       ^
       1 2∘.÷0 1
-Attempted division by zero
+DOMAIN ERROR
 1 2∘.÷0 1
-   ↑
+   ^
       (2 2⍴1)∘.+2 2⍴1
-Greater than three dimensions
+SYSTEM LIMIT
 (2 2⍴1)∘.+2 2⍴1
-       ↑
+       ^
       ⍝ Only dyadic scalar functions can be combined
       +.,1
-Invalid inner product expression
+SYNTAX ERROR
 +.,1
-↑
+^
       ,.+1
-Invalid inner product expression
+SYNTAX ERROR
 ,.+1
-↑
+^
       +.⍳1
-Invalid inner product expression
+SYNTAX ERROR
 +.⍳1
-↑
+^
       1∘.⍳2
-Invalid outer product expression
+SYNTAX ERROR
 1∘.⍳2
- ↑
+ ^
       1∘.,2
-Invalid outer product expression
+SYNTAX ERROR
 1∘.,2
- ↑
+ ^
       ⍝ Products have no monadic form
       ∘.+3
-Dyadic operator not preceded by primary
+SYNTAX ERROR
 ∘.+3
-↑
+^
       +.×3
-Dyadic operator not preceded by primary
+SYNTAX ERROR
 +.×3
-↑
+^

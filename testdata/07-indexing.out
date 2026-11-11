@@ -103,58 +103,58 @@
 5 0 7 8 ¯1
       ⍝ Errors
       V[6]
-Index out of range
+INDEX ERROR
 V[6]
- ↑
+ ^
       V[0]
-Index out of range
+INDEX ERROR
 V[0]
- ↑
+ ^
       V[1.5]
-Non-integer indices
+DOMAIN ERROR
 V[1.5]
- ↑
+ ^
       V[1;1]
-Non-scalar indices
+RANK ERROR
 V[1;1]
- ↑
+ ^
       M[2]
-Non-scalar indices
+RANK ERROR
 M[2]
- ↑
+ ^
       M[4;1]
-Index out of range
+INDEX ERROR
 M[4;1]
- ↑
+ ^
       M[1;5]
-Index out of range
+INDEX ERROR
 M[1;5]
- ↑
+ ^
       5[1]
-Non-scalar indices
+RANK ERROR
 5[1]
- ↑
+ ^
       V[2
-Invalid index expression
+SYNTAX ERROR
 V[2
-   ↑
+   ^
       V[2;
-Invalid index expression
+SYNTAX ERROR
 V[2;
-    ↑
+    ^
       V[1]←1 2
-Assigned expression not a scalar
+LENGTH ERROR
 V[1]←1 2
-↑
+^
       M[1;]←1 2
-Assigned expression not a scalar
+LENGTH ERROR
 M[1;]←1 2
-↑
+^
       W[1]←0
-Variable not assigned a value
+VALUE ERROR
 W[1]←0
-↑
+^
       V[6]←0
-Index out of range
+INDEX ERROR
 V[6]←0
-↑
+^

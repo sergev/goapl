@@ -16,9 +16,6 @@
 ⌊/3 9 2
 |/3 10
 ⍟/2 8
-⍝ ○/ is log to base, as in the original
-○/2 8
-○/10 1000
 ⍝ Reduction runs along the last axis
 +/2 3⍴⍳6
 +/2 2 3⍴⍳12
@@ -26,14 +23,26 @@
 ⍝ Results can be used further
 2×+/⍳10
 +/+/2 3⍴⍳6
-⍝ Errors
+⍝ A scalar or one item reduces to itself
 +/5
 +/,5
+⍴+/,5
+⍝ An empty axis gives the identity element
 +/⍳0
+×/⍳0
+∧/⍳0
+∨/⍳0
+⌈/⍳0
+⌊/⍳0
++/2 0⍴0
+⍴+/2 0⍴0
+⍝ Errors
+⍟/⍳0
 ÷/1 0
 2+/1 2 3
 ⍝ Only dyadic scalar functions can be reduced
 ~/1 0
 ⍳/1 2
 ,/1 2
+○/2 8
 /1 2

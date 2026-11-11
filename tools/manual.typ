@@ -43,7 +43,7 @@
   show raw.line: l => {
     if l.text.starts-with("      ") or l.text.match(regex("^\[\d+\] ")) != none {
       text(fill: typed, l.body)
-    } else if l.text.trim() == "↑" {
+    } else if l.text.trim() == "^" {
       text(fill: caret, l.body)
     } else {
       l.body

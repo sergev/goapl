@@ -25,15 +25,18 @@ func toInt(v float64) (int, bool) {
 
 // interval is ⍳N: 1 2 ... N.
 func interval(x *Array) (*Array, error) {
-	if x.Size() != 1 || x.Rank() > 1 {
-		return nil, newError(21)
+	if x.Rank() > 1 {
+		return nil, newError(RankError)
+	}
+	if x.Size() != 1 {
+		return nil, newError(LengthError)
 	}
 	if x.Data[0] < 0 {
-		return nil, newError(22)
+		return nil, newError(DomainError)
 	}
 	n, ok := toInt(x.Data[0])
 	if !ok {
-		return nil, newError(23)
+		return nil, newError(DomainError)
 	}
 	r := make([]float64, n)
 	for i := range r {
@@ -55,7 +58,7 @@ func ravel(x *Array) (*Array, error) { return Vector(x.Data), nil }
 // indexOf is A⍳B: position of each B in vector A, or 1+⍴A if absent.
 func indexOf(a, b *Array) (*Array, error) {
 	if a.Rank() != 1 {
-		return nil, newError(29)
+		return nil, newError(RankError)
 	}
 	r := &Array{Shape: b.Shape, Data: make([]float64, b.Size())}
 	for i, v := range b.Data {
@@ -73,21 +76,21 @@ func indexOf(a, b *Array) (*Array, error) {
 // reshape is A⍴B, cycling B; an empty B fills with zeros.
 func reshape(a, b *Array) (*Array, error) {
 	if a.Rank() > 1 {
-		return nil, newError(56)
+		return nil, newError(RankError)
 	}
 	shape := make([]int, a.Size())
 	for i, v := range a.Data {
 		if v < 0 {
-			return nil, newError(22)
+			return nil, newError(DomainError)
 		}
 		n, ok := toInt(v)
 		if !ok {
-			return nil, newError(23)
+			return nil, newError(DomainError)
 		}
 		shape[i] = n
 	}
 	if len(shape) > MaxRank {
-		return nil, newError(60)
+		return nil, newError(SystemLimit)
 	}
 	r := &Array{Shape: shape, Data: make([]float64, shapeSize(shape))}
 	if b.Size() > 0 {
@@ -101,7 +104,7 @@ func reshape(a, b *Array) (*Array, error) {
 // catenate is A,B for scalars and vectors.
 func catenate(a, b *Array) (*Array, error) {
 	if a.Rank() > 1 || b.Rank() > 1 {
-		return nil, newError(53)
+		return nil, newError(RankError)
 	}
 	r := make([]float64, 0, a.Size()+b.Size())
 	r = append(r, a.Data...)
@@ -112,7 +115,7 @@ func catenate(a, b *Array) (*Array, error) {
 // and the shape of the selection.
 func indexPositions(shape []int, idx []*Array) ([]int, []int, error) {
 	if len(idx) != len(shape) {
-		return nil, nil, newError(35)
+		return nil, nil, newError(RankError)
 	}
 	pos := []int{0}
 	var rshape []int
@@ -129,10 +132,10 @@ func indexPositions(shape []int, idx []*Array) ([]int, []int, error) {
 			for i, v := range ix.Data {
 				n, ok := toInt(v)
 				if !ok {
-					return nil, nil, newError(37)
+					return nil, nil, newError(DomainError)
 				}
 				if n < 1 || n > shape[k] {
-					return nil, nil, newError(38)
+					return nil, nil, newError(IndexError)
 				}
 				sel[i] = n - 1
 			}
@@ -156,7 +159,7 @@ func index(x *Array, idx []*Array) (*Array, error) {
 		return nil, err
 	}
 	if len(shape) > MaxRank {
-		return nil, newError(60)
+		return nil, newError(SystemLimit)
 	}
 	r := &Array{Shape: shape, Data: make([]float64, len(pos))}
 	for i, p := range pos {
@@ -172,7 +175,7 @@ func indexAssign(x *Array, idx []*Array, v *Array) (*Array, error) {
 		return nil, err
 	}
 	if v.Size() != 1 && !sameShape(v, &Array{Shape: shape}) {
-		return nil, newError(36)
+		return nil, newError(LengthError)
 	}
 	r := &Array{Shape: x.Shape, Data: append([]float64(nil), x.Data...)}
 	for i, p := range pos {
@@ -188,7 +191,7 @@ func indexAssign(x *Array, idx []*Array, v *Array) (*Array, error) {
 // compress is A/B along the last axis; A gives a repeat count per item.
 func compress(a, b *Array) (*Array, error) {
 	if a.Rank() > 1 {
-		return nil, newError(29)
+		return nil, newError(RankError)
 	}
 	if b.IsScalar() {
 		b = Vector(b.Data)
@@ -199,16 +202,16 @@ func compress(a, b *Array) (*Array, error) {
 		v := a.Data[0]
 		if a.Size() != 1 {
 			if a.Size() != n {
-				return nil, newError(55)
+				return nil, newError(LengthError)
 			}
 			v = a.Data[i]
 		}
 		if v < 0 {
-			return nil, newError(22)
+			return nil, newError(DomainError)
 		}
 		c, ok := toInt(v)
 		if !ok {
-			return nil, newError(23)
+			return nil, newError(DomainError)
 		}
 		counts[i] = c
 	}

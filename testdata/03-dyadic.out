@@ -83,50 +83,52 @@
 512
       ⍝ Errors
       1÷0
-Attempted division by zero
+DOMAIN ERROR
 1÷0
- ↑
+ ^
+      0÷0
+1
       1 2 3÷1 0 1
-Attempted division by zero
+DOMAIN ERROR
 1 2 3÷1 0 1
-     ↑
+     ^
       0*¯1
-Attempted division by zero
+DOMAIN ERROR
 0*¯1
- ↑
+ ^
       1 2+1 2 3
-Args. incompatible for dyadic operation
+LENGTH ERROR
 1 2+1 2 3
-   ↑
+   ^
       (2 2⍴1)+2 3⍴1
-Args. incompatible for dyadic operation
+LENGTH ERROR
 (2 2⍴1)+2 3⍴1
-       ↑
+       ^
       (2 2⍴1)+1 2 3 4
-Args. incompatible for dyadic operation
+RANK ERROR
 (2 2⍴1)+1 2 3 4
-       ↑
+       ^
       2∧3
-Value not boolean
+DOMAIN ERROR
 2∧3
- ↑
+ ^
       0.5∨1
-Value not boolean
+DOMAIN ERROR
 0.5∨1
-   ↑
+   ^
       ¯8*1÷3
-Argument is not an integer
+DOMAIN ERROR
 ¯8*1÷3
-  ↑
+  ^
       ¯2⍟8
-Number and base of different sign
+DOMAIN ERROR
 ¯2⍟8
-  ↑
+  ^
       1⍟5
-Attempted division by zero
+DOMAIN ERROR
 1⍟5
- ↑
+ ^
       2~1
-Invalid expression
+VALENCE ERROR
 2~1
- ↑
+ ^

@@ -14,8 +14,8 @@ import (
 type parityCase struct {
 	name  string
 	lines []string
-	want  string // expected output; ignored if code != 0
-	code  int    // expected error code, or 0
+	want  string // expected output; ignored if class != 0
+	class Class  // expected error class, or 0
 }
 
 func parityCases() []parityCase {
@@ -74,7 +74,6 @@ func parityCases() []parityCase {
 		{name: "reduce_or", lines: []string{"∨/0 0 1"}, want: "1"},
 		{name: "reduce_ceiling", lines: []string{"⌈/1 3 2"}, want: "3"},
 		{name: "reduce_floor", lines: []string{"⌊/1 3 2"}, want: "1"},
-		{name: "reduce_circle_log", lines: []string{"○/2 8"}, want: "3"},
 		{name: "slash_as_reduce", lines: []string{"+/1 2"}, want: "3"},
 		// products
 		{name: "inner_product", lines: []string{"1+.×2"}, want: "2"},
@@ -90,34 +89,46 @@ func parityCases() []parityCase {
 		{name: "rightarrow_present", lines: []string{"→0"}, want: ""},
 		{name: "quad_alone", lines: []string{"⎕", "5"}, want: "⎕:\n5"},
 		// glyphs in APLCharSet that are not functions
-		{name: "charset_only_DoubleQuote", lines: []string{`1"2`}, code: 4},
-		{name: "charset_only_QuestionMark", lines: []string{"1?2"}, code: 10},
-		{name: "charset_only_omega", lines: []string{"1ω2"}, code: 10},
-		{name: "charset_only_epsilon", lines: []string{"1ε2"}, code: 10},
-		{name: "charset_only_UpArrow", lines: []string{"1↑2"}, code: 10},
-		{name: "charset_only_DownArrow", lines: []string{"1↓2"}, code: 10},
-		{name: "charset_only_alpha", lines: []string{"1α2"}, code: 10},
-		{name: "charset_only_UnderScore", lines: []string{"1_2"}, code: 10},
-		{name: "charset_only_del", lines: []string{"1∇2"}, code: 10},
-		{name: "charset_only_delta", lines: []string{"1∆2"}, code: 10},
-		{name: "charset_only_SingleQuote", lines: []string{"1'2"}, code: 4},
-		{name: "charset_only_EastCap", lines: []string{"1⊃2"}, code: 4},
-		{name: "charset_only_WestCap", lines: []string{"1⊂2"}, code: 4},
-		{name: "charset_only_NorthCap", lines: []string{"1∪2"}, code: 4},
-		{name: "charset_only_ibeam", lines: []string{"1⊥2"}, code: 10},
-		{name: "charset_only_TBeam", lines: []string{"1⊤2"}, code: 10},
-		{name: "charset_only_BackwardSlash", lines: []string{`1\2`}, code: 10},
-		{name: "charset_only_LeftBracket", lines: []string{"1[2]"}, code: 35},
+		{name: "charset_only_DoubleQuote", lines: []string{`1"2`}, class: SyntaxError},
+		{name: "charset_only_QuestionMark", lines: []string{"1?2"}, class: NonceError},
+		{name: "charset_only_omega", lines: []string{"1ω2"}, class: SyntaxError},
+		{name: "charset_only_epsilon", lines: []string{"1ε2"}, class: NonceError},
+		{name: "charset_only_UpArrow", lines: []string{"1↑2"}, class: NonceError},
+		{name: "charset_only_DownArrow", lines: []string{"1↓2"}, class: NonceError},
+		{name: "charset_only_alpha", lines: []string{"1α2"}, class: SyntaxError},
+		{name: "charset_only_UnderScore", lines: []string{"1_2"}, class: SyntaxError},
+		{name: "charset_only_del", lines: []string{"1∇2"}, class: SyntaxError},
+		{name: "charset_only_delta", lines: []string{"1∆2"}, class: SyntaxError},
+		{name: "charset_only_SingleQuote", lines: []string{"1'2"}, class: SyntaxError},
+		{name: "charset_only_EastCap", lines: []string{"1⊃2"}, class: SyntaxError},
+		{name: "charset_only_WestCap", lines: []string{"1⊂2"}, class: SyntaxError},
+		{name: "charset_only_NorthCap", lines: []string{"1∪2"}, class: SyntaxError},
+		{name: "charset_only_ibeam", lines: []string{"1⊥2"}, class: NonceError},
+		{name: "charset_only_TBeam", lines: []string{"1⊤2"}, class: NonceError},
+		{name: "charset_only_BackwardSlash", lines: []string{`1\2`}, class: NonceError},
+		{name: "charset_only_LeftBracket", lines: []string{"1[2]"}, class: RankError},
 
-		// Deliberate differences from the prototype:
+		// Deliberate differences from the prototype.
+		// Errors are reported by APL2 class, not by the prototype's
+		// numbered messages. Unimplemented glyphs give NONCE ERROR.
+		// ○/ was log to base; ○ is reserved for the circular functions.
+		{name: "differs_reduce_circle", lines: []string{"○/2 8"}, class: SyntaxError},
+		// Reducing a scalar, one item or an empty axis were errors.
+		{name: "differs_reduce_scalar", lines: []string{"+/5"}, want: "5"},
+		{name: "differs_reduce_one", lines: []string{"+/,5"}, want: "5"},
+		{name: "differs_reduce_empty", lines: []string{"×/⍳0"}, want: "1"},
+		// 0÷0 was an error; it is 1 as in APL2.
+		{name: "differs_zero_div_zero", lines: []string{"0÷0"}, want: "1"},
+		// Names were limited to 10 characters.
+		{name: "differs_long_name", lines: []string{"ABCDEFGHIJK←1", "ABCDEFGHIJK"}, want: "1"},
 		// 1|2 was an error; | is residue here.
 		{name: "differs_VerticalStroke", lines: []string{"1|2"}, want: "0"},
 		// 1;2 printed 2; ; is only an index separator here.
-		{name: "differs_semicolon_stmt", lines: []string{"1;2"}, code: 10},
+		{name: "differs_semicolon_stmt", lines: []string{"1;2"}, class: SyntaxError},
 		// 1]2 printed 2; a stray ] is an error here.
-		{name: "differs_RightBracket", lines: []string{"1]2"}, code: 10},
+		{name: "differs_RightBracket", lines: []string{"1]2"}, class: SyntaxError},
 		// 1∩2 printed 1; ∩ is not a known glyph here.
-		{name: "differs_SouthCap", lines: []string{"1∩2"}, code: 4},
+		{name: "differs_SouthCap", lines: []string{"1∩2"}, class: SyntaxError},
 	}...)
 	return cases
 }
@@ -125,7 +136,7 @@ func parityCases() []parityCase {
 func TestParity(t *testing.T) {
 	for _, c := range parityCases() {
 		t.Run(c.name, func(t *testing.T) {
-			if c.code != 0 {
+			if c.class != 0 {
 				in := New(&bytes.Buffer{})
 				var err error
 				for _, l := range c.lines {
@@ -133,8 +144,8 @@ func TestParity(t *testing.T) {
 						break
 					}
 				}
-				if e, ok := err.(*Error); !ok || e.Code != c.code {
-					t.Errorf("%v: got %v, want code %d (%s)", c.lines, err, c.code, Messages[c.code])
+				if e, ok := err.(*Error); !ok || e.Class != c.class {
+					t.Errorf("%v: got %v, want %v", c.lines, err, c.class)
 				}
 				return
 			}

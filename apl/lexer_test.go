@@ -29,6 +29,7 @@ func TestLex(t *testing.T) {
 		{"L1:→L1", "NAME(L1) SPEC(:) SPEC(→) NAME(L1)"},
 		{"1 2∘.×3", "NUM(1 2) SPEC(∘) SPEC(.) PRIM(×) NUM(3)"},
 		{"⎕←X", "SPEC(⎕) SPEC(←) NAME(X)"},
+		{"LongName_∆1←x", "NAME(LongName_∆1) SPEC(←) NAME(x)"},
 	}
 	for _, c := range cases {
 		if got := lexString(t, c.in); got != c.want {
@@ -39,14 +40,13 @@ func TestLex(t *testing.T) {
 
 func TestLexErrors(t *testing.T) {
 	cases := []struct {
-		in   string
-		code int
-		pos  int
+		in    string
+		class Class
+		pos   int
 	}{
-		{"¯A", 1, 1},
-		{"1.+2", 2, 2},
-		{"1 # 2", 4, 2},
-		{"ABCDEFGHIJK←1", 70, 0},
+		{"¯A", SyntaxError, 1},
+		{"1.+2", SyntaxError, 2},
+		{"1 # 2", SyntaxError, 2},
 	}
 	for _, c := range cases {
 		_, err := Lex(c.in)
@@ -55,8 +55,8 @@ func TestLexErrors(t *testing.T) {
 			t.Errorf("Lex(%q): got %v, want *Error", c.in, err)
 			continue
 		}
-		if le.Code != c.code || le.Pos != c.pos {
-			t.Errorf("Lex(%q) = code %d at %d, want %d at %d", c.in, le.Code, le.Pos, c.code, c.pos)
+		if le.Class != c.class || le.Pos != c.pos {
+			t.Errorf("Lex(%q) = %v at %d, want %v at %d", c.in, le.Class, le.Pos, c.class, c.pos)
 		}
 	}
 }

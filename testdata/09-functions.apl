@@ -145,9 +145,10 @@ CALLER 1
 ∇A B C D
 ∇1 F
 ∇R←F X;
-⍝ A function needs statements
+⍝ A function may have no statements
 ∇EMPTY
 ∇
+EMPTY
 ⍝ A function name cannot be assigned
 SQ←1
 ⍝ Wrong number of arguments

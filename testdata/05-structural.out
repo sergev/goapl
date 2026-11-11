@@ -94,62 +94,62 @@
 4 6
       ⍝ Errors
       ⍳1 2
-Argument not a scalar
+LENGTH ERROR
 ⍳1 2
-↑
+^
       ⍳¯1
-Argument is negative
+DOMAIN ERROR
 ⍳¯1
-↑
+^
       ⍳2.5
-Argument is not an integer
+DOMAIN ERROR
 ⍳2.5
-↑
+^
       (2 2⍴1)⍴5
-Left argument not a vector
+RANK ERROR
 (2 2⍴1)⍴5
-       ↑
+       ^
       2 2 2 2⍴1
-Greater than three dimensions
+SYSTEM LIMIT
 2 2 2 2⍴1
-       ↑
+       ^
       ¯1⍴5
-Argument is negative
+DOMAIN ERROR
 ¯1⍴5
-  ↑
+  ^
       1.5⍴5
-Argument is not an integer
+DOMAIN ERROR
 1.5⍴5
-   ↑
+   ^
       (2 2⍴1)⍳1
-Left argument is not a vector
+RANK ERROR
 (2 2⍴1)⍳1
-       ↑
+       ^
       5⍳1
-Left argument is not a vector
+RANK ERROR
 5⍳1
- ↑
+ ^
       (2 2⍴1),1
-Argument(s) with rank greater than one
+RANK ERROR
 (2 2⍴1),1
-       ↑
+       ^
       1,2 2⍴1
-Argument(s) with rank greater than one
+RANK ERROR
 1,2 2⍴1
- ↑
+ ^
       1 0/1 2 3
-Args. incompatible for dyadic operation
+LENGTH ERROR
 1 0/1 2 3
-   ↑
+   ^
       ¯1/1
-Argument is negative
+DOMAIN ERROR
 ¯1/1
-  ↑
+  ^
       0.5/1
-Argument is not an integer
+DOMAIN ERROR
 0.5/1
-   ↑
+   ^
       (2 2⍴1)/1 2
-Left argument is not a vector
+RANK ERROR
 (2 2⍴1)/1 2
-       ↑
+       ^

@@ -26,7 +26,7 @@
 ¯1 0 1
       1   2    3
 1 2 3
-      ⍝ Names: letters, digits, ∆ and _; up to 10 characters
+      ⍝ Names: letters, digits, ∆ and _; any length
       A←1
       ABC←2
       A1B2←3
@@ -37,6 +37,9 @@
       ABCDEFGHIJ←6
       ABCDEFGHIJ
 6
+      LongVariableName←8
+      LongVariableName
+8
       abc←7
       abc
 7
@@ -47,34 +50,30 @@
 
       ⍝ Lexical errors
       ¯A
-Invalid character follows negative sign
+SYNTAX ERROR
 ¯A
- ↑
+ ^
       ¯
-Invalid character follows negative sign
+SYNTAX ERROR
 ¯
- ↑
+ ^
       1.
-Digit must follow a decimal point
+SYNTAX ERROR
 1.
-  ↑
+  ^
       1.+2
-Digit must follow a decimal point
+SYNTAX ERROR
 1.+2
-  ↑
+  ^
       1 # 2
-Invalid character encountered
+SYNTAX ERROR
 1 # 2
-  ↑
+  ^
       'A'
-Invalid character encountered
+SYNTAX ERROR
 'A'
-↑
-      ABCDEFGHIJK←1
-Identifier too long
-ABCDEFGHIJK←1
-↑
+^
       1E
-Invalid expression
+SYNTAX ERROR
 1E
- ↑
+ ^
